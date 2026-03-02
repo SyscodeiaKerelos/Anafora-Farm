@@ -1,0 +1,185 @@
+<div class="min-h-screen p-4 bg-surface-50 dark:bg-surface-900">
+  <!-- Header with Theme & Language Toggle -->
+  <header
+    class="flex justify-content-between align-items-center mb-4 p-3 bg-surface-0 dark:bg-surface-800 border-round-lg shadow-1"
+  >
+    <h1 class="text-2xl font-bold m-0 text-primary">{{ title }}</h1>
+
+    <div class="flex gap-3 align-items-center">
+      <!-- Language Switcher -->
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="p-button p-button-sm"
+          [class.p-button-primary]="translationService.currentLang() === 'en'"
+          [class.p-button-outlined]="translationService.currentLang() !== 'en'"
+          (click)="translationService.setLanguage('en')"
+        >
+          {{ 'EN' | translate }}
+        </button>
+        <button
+          type="button"
+          class="p-button p-button-sm"
+          [class.p-button-primary]="translationService.currentLang() === 'ar'"
+          [class.p-button-outlined]="translationService.currentLang() !== 'ar'"
+          (click)="translationService.setLanguage('ar')"
+        >
+          {{ 'AR' | translate }}
+        </button>
+      </div>
+
+      <!-- Theme Toggle -->
+      <button
+        type="button"
+        class="p-button p-button-sm"
+        [class.p-button-warning]="themeService.isDark()"
+        [class.p-button-secondary]="!themeService.isDark()"
+        (click)="themeService.toggleTheme()"
+        [attr.aria-label]="
+          themeService.isDark() ? ('LIGHT_MODE' | translate) : ('DARK_MODE' | translate)
+        "
+      >
+        <i
+          class="pi"
+          [class.pi-moon]="!themeService.isDark()"
+          [class.pi-sun]="themeService.isDark()"
+        ></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Form Inputs Section -->
+    <div class="col-12 md:col-6">
+      <div class="p-card h-full">
+        <div class="p-card-header">
+          <span class="text-xl font-semibold">{{ 'SETTINGS' | translate }}</span>
+        </div>
+        <div class="p-card-body flex flex-column gap-4 p-4">
+          <!-- Text Input -->
+          <div class="flex flex-column gap-2">
+            <label for="username" class="font-semibold">{{ 'USERNAME' | translate }}</label>
+            <input
+              pInputText
+              id="username"
+              [placeholder]="'ENTER_USERNAME' | translate"
+              class="w-full"
+            />
+          </div>
+
+          <!-- Email Input -->
+          <div class="flex flex-column gap-2">
+            <label for="email" class="font-semibold">{{ 'EMAIL' | translate }}</label>
+            <input
+              pInputText
+              id="email"
+              type="email"
+              [placeholder]="'ENTER_EMAIL' | translate"
+              class="w-full"
+            />
+          </div>
+
+          <!-- Password Input -->
+          <div class="flex flex-column gap-2">
+            <label for="password" class="font-semibold">{{ 'PASSWORD' | translate }}</label>
+            <input
+              pInputText
+              id="password"
+              type="password"
+              [placeholder]="'ENTER_PASSWORD' | translate"
+              class="w-full"
+            />
+          </div>
+
+          <!-- Dropdown -->
+          <div class="flex flex-column gap-2">
+            <label for="city" class="font-semibold">{{ 'SELECT_CITY' | translate }}</label>
+            <p-select
+              id="city"
+              [options]="cities"
+              [(ngModel)]="selectedCity"
+              optionLabel="name"
+              [placeholder]="'CHOOSE_CITY' | translate"
+              class="w-full"
+            >
+            </p-select>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex gap-2 mt-2">
+            <button
+              type="button"
+              pButton
+              [label]="'SUBMIT' | translate"
+              icon="pi pi-check"
+            ></button>
+            <button
+              type="button"
+              pButton
+              [label]="'CANCEL' | translate"
+              class="p-button-outlined"
+              icon="pi pi-times"
+            ></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Section -->
+    <div class="col-12 md:col-6">
+      <div class="p-card h-full">
+        <div class="p-card-header">
+          <span class="text-xl font-semibold">{{ 'PRODUCTS' | translate }}</span>
+        </div>
+        <div class="p-card-body">
+          <p-table
+            [value]="products"
+            [tableStyle]="{ 'min-width': '20rem' }"
+            styleClass="p-datatable-sm"
+          >
+            <ng-template pTemplate="header">
+              <tr>
+                <th>{{ 'ID' | translate }}</th>
+                <th>{{ 'NAME' | translate }}</th>
+                <th>{{ 'CATEGORY' | translate }}</th>
+                <th>{{ 'PRICE' | translate }}</th>
+                <th>{{ 'STATUS' | translate }}</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-product>
+              <tr>
+                <td>{{ product.id }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ product.category }}</td>
+                <td>{{ product.price | currency }}</td>
+                <td>
+                  <p-tag [value]="product.status" [severity]="getSeverity(product.status)"> </p-tag>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="5" class="text-center">{{ 'NO_DATA' | translate }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Welcome Message -->
+  <div class="mt-4 text-center">
+    <p class="text-xl">{{ 'WELCOME' | translate }}!</p>
+    <p class="text-500">
+      {{ 'CURRENT_THEME' | translate }}:
+      {{ themeService.isDark() ? ('DARK' | translate) : ('LIGHT' | translate) }}
+    </p>
+    <p class="text-500">
+      {{ 'CURRENT_LANGUAGE' | translate }}:
+      {{
+        translationService.currentLang() === 'ar' ? ('ARABIC' | translate) : ('ENGLISH' | translate)
+      }}
+    </p>
+  </div>
+</div>
