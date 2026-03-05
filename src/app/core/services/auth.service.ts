@@ -73,6 +73,25 @@ export class AuthService {
     });
   }
 
+  async refreshUser(): Promise<void> {
+    const current = this.auth.currentUser;
+
+    if (!current) {
+      this._user.set(null);
+      return;
+    }
+
+    await current.getIdToken(true);
+    const role = await this.resolveUserRole(current);
+
+    this._user.set({
+      uid: current.uid,
+      email: current.email,
+      displayName: current.displayName,
+      role,
+    });
+  }
+
   async loginWithEmailPassword(credentials: Credentials): Promise<void> {
     await signInWithEmailAndPassword(this.auth, credentials.email, credentials.password);
   }

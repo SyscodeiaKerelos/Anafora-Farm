@@ -28,7 +28,7 @@ type IconPosition = 'left' | 'right';
       @if (loading()) {
         <span class="inline-flex items-center gap-2">
           <span
-            class="h-3 w-3 animate-spin rounded-full border border-foreground border-t-transparent"
+            class="h-3 w-3 animate-spin rounded-full border border-slate-900 dark:border-slate-50 border-t-transparent"
           ></span>
           @if (labelKey()) {
             <span>{{ labelKey() | translate }}</span>

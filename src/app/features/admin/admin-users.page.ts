@@ -11,21 +11,15 @@ import {
 
 import { AuthService } from '../../core/services/auth.service';
 import { Role } from '../../core/types/role';
-import { getFirebaseDb } from '../../core/config/firebase.config';
 import { TranslationService } from '../../core/services/translation.service';
+import { AdminUser } from '../../core/types/admin-user';
+import { UserDirectoryService } from '../../core/services/user-directory.service';
 import {
   UiDataTable,
   type ColumnConfig,
   type FilterConfig,
   type TableRowActionEvent,
 } from '../../shared/ui/table/ui-data-table.component';
-
-interface UserRow {
-  id: string;
-  email: string | null;
-  displayName: string | null;
-  role: Role;
-}
 
 @Component({
   selector: 'app-admin-users-page',
@@ -37,7 +31,7 @@ interface UserRow {
   template: `
     @if (!canManage()) {
       <section class="card-glass p-6 text-center">
-        <h1 class="text-xl font-semibold text-foreground">
+        <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-50">
           {{ 'translate_admin-restricted-title' | translate }}
         </h1>
         <p class="mt-2 text-muted">
@@ -48,7 +42,7 @@ interface UserRow {
       <section class="card-glass p-6">
         <header class="mb-4 flex items-center justify-between">
           <div>
-            <h1 class="text-xl font-semibold text-foreground">
+            <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-50">
               {{ 'translate_admin-users-title' | translate }}
             </h1>
             <p class="mt-1 text-muted">
@@ -89,17 +83,17 @@ interface UserRow {
 })
 export class AdminUsersPage {
   private readonly authService = inject(AuthService);
-  private readonly db = getFirebaseDb();
   private readonly translation = inject(TranslationService);
+  private readonly userDirectory = inject(UserDirectoryService);
 
-  protected readonly users = signal<UserRow[]>([]);
+  protected readonly users = signal<AdminUser[]>([]);
   protected readonly loading = signal(true);
   protected readonly savingId = signal<string | null>(null);
   protected readonly error = signal<string | null>(null);
 
   protected readonly canManage = computed(() => this.authService.hasAtLeastRole('superAdmin'));
 
-  protected readonly columns: ColumnConfig<UserRow>[] = [
+  protected readonly columns: ColumnConfig<AdminUser>[] = [
     {
       headerKey: 'translate_email',
       field: 'email',
@@ -138,7 +132,7 @@ export class AdminUsersPage {
     },
   ];
 
-  protected readonly filters: FilterConfig<UserRow>[] = [
+  protected readonly filters: FilterConfig<AdminUser>[] = [
     {
       id: 'search',
       labelKey: 'translate_admin-users-filter-search-label',
@@ -164,7 +158,7 @@ export class AdminUsersPage {
     void this.reload();
   }
 
-  onRowAction(event: TableRowActionEvent<UserRow>): void {
+  onRowAction(event: TableRowActionEvent<AdminUser>): void {
     if (!this.canManage()) {
       return;
     }
@@ -185,27 +179,14 @@ export class AdminUsersPage {
     this.error.set(null);
 
     try {
-      const snapshot = await getDocs(collection(this.db, 'users'));
-      const rows: UserRow[] = [];
-
-      snapshot.forEach((docSnapshot) => {
-        const data = docSnapshot.data() as {
-          email?: string | null;
-          displayName?: string | null;
-          role?: Role;
-        };
-
-        rows.push({
-          id: docSnapshot.id,
-          email: data.email ?? null,
-          displayName: data.displayName ?? null,
-          role: data.role ?? 'user',
-        });
-      });
-
-      this.users.set(rows);
-    } catch {
-      this.error.set(this.translation.instant('translate_admin-users-error-load'));
+      const users = await this.userDirectory.loadAll();
+      this.users.set(users);
+    } catch (err) {
+      if (typeof err === 'string') {
+        this.error.set(err);
+      } else {
+        this.error.set(this.translation.instant('translate_admin-users-error-load'));
+      }
     } finally {
       this.loading.set(false);
     }
@@ -220,14 +201,16 @@ export class AdminUsersPage {
     this.error.set(null);
 
     try {
-      const ref = doc(collection(this.db, 'users'), id);
-      await updateDoc(ref, { role });
-
+      await this.userDirectory.updateRole(id, role);
       this.users.update((current) =>
         current.map((user) => (user.id === id ? { ...user, role } : user)),
       );
-    } catch {
-      this.error.set(this.translation.instant('translate_admin-users-error-update'));
+    } catch (err) {
+      if (typeof err === 'string') {
+        this.error.set(err);
+      } else {
+        this.error.set(this.translation.instant('translate_admin-users-error-update'));
+      }
     } finally {
       this.savingId.set(null);
     }

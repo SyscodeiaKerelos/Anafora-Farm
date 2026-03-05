@@ -9,6 +9,7 @@ import Aura from '@primeuix/themes/aura';
 import { routes } from './app.routes';
 import { TranslationService } from './core/services/translation.service';
 import { AuthService } from './core/services/auth.service';
+import { UserDirectoryService } from './core/services/user-directory.service';
 
 export function createTranslateLoader() {
   return new TranslateHttpLoader();
@@ -43,5 +44,6 @@ export const appConfig: ApplicationConfig = {
     }),
     TranslationService,
     AuthService,
+    UserDirectoryService,
   ],
 };

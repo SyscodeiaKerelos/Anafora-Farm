@@ -19,7 +19,7 @@ interface SelectOption {
   },
   template: `
     @if (labelKey()) {
-      <label class="text-[11px] font-semibold text-foreground">
+      <label class="text-[11px] font-semibold text-slate-900 dark:text-slate-50">
         {{ labelKey() | translate }}
         @if (required()) {
           <span class="ms-0.5 text-red-400">*</span>

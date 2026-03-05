@@ -6,6 +6,7 @@ import { ThemeService } from '../../core/services/theme.service';
 import { TranslationService } from '../../core/services/translation.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Role } from '../../core/types/role';
+import { UiBadge } from '../../shared/ui/badge/ui-badge.component';
 
 type DashboardCardId = 'fields' | 'tasks' | 'livestock' | 'inventory' | 'reports';
 
@@ -34,7 +35,7 @@ interface ManagerKpi {
 @Component({
   selector: 'app-home-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, UiBadge],
   host: {
     class: 'block space-y-6',
   },
@@ -47,7 +48,7 @@ interface ManagerKpi {
           <p class="text-xs font-medium uppercase tracking-[0.25em] text-muted">
             {{ 'translate_app-name' | translate }}
           </p>
-          <h2 class="mt-2 text-2xl font-semibold text-foreground">
+          <h2 class="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
             {{ 'translate_dashboard_welcome' | translate }}
             @if (authService.user()) {
               <span>, {{ authService.user()?.displayName || authService.user()?.email }}</span>
@@ -60,18 +61,19 @@ interface ManagerKpi {
 
         <div class="mt-4 flex flex-wrap gap-2">
           <!-- Role badge -->
-          <span class="inline-flex items-center rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-200">
-            {{
-              (authService.role() === 'superAdmin'
+          <app-ui-badge
+            tone="emerald"
+            [labelKey]="
+              authService.role() === 'superAdmin'
                 ? 'translate_role-super-admin-label'
                 : authService.role() === 'admin'
                   ? 'translate_role-admin-label'
-                  : 'translate_role-user-label') | translate
-            }}
-          </span>
+                  : 'translate_role-user-label'
+            "
+          />
 
           <!-- Theme chip -->
-          <span class="inline-flex items-center rounded-full bg-sky-500/10 px-3 py-1 text-[11px] text-sky-200">
+          <app-ui-badge tone="sky">
             {{ 'translate_current-theme' | translate }}:
             <span class="ms-1">
               {{
@@ -80,10 +82,10 @@ interface ManagerKpi {
                   : ('translate_light' | translate)
               }}
             </span>
-          </span>
+          </app-ui-badge>
 
           <!-- Language chip -->
-          <span class="inline-flex items-center rounded-full bg-amber-400/10 px-3 py-1 text-[11px] text-amber-200">
+          <app-ui-badge tone="amber">
             {{ 'translate_current-language' | translate }}:
             <span class="ms-1">
               {{
@@ -92,7 +94,7 @@ interface ManagerKpi {
                   : ('translate_english' | translate)
               }}
             </span>
-          </span>
+          </app-ui-badge>
         </div>
       </div>
 
@@ -103,7 +105,7 @@ interface ManagerKpi {
             <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-500/10 via-emerald-500/10 to-transparent"></div>
 
             <div class="relative space-y-1">
-              <h3 class="text-sm font-semibold text-foreground">
+              <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-50">
                 {{ card.titleKey | translate }}
               </h3>
               <p class="text-xs text-muted">
@@ -129,7 +131,7 @@ interface ManagerKpi {
         <!-- Manager / owner overview -->
         <div class="card-glass p-4">
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-foreground">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-50">
               {{ 'translate_dashboard_section-manager-overview' | translate }}
             </h3>
           </div>
@@ -140,7 +142,7 @@ interface ManagerKpi {
                 <p class="text-xs text-muted">
                   {{ kpi.labelKey | translate }}
                 </p>
-                <p class="mt-1 text-lg font-semibold text-foreground">
+                <p class="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-50">
                   {{ kpi.value }}
                 </p>
               </div>
@@ -151,7 +153,7 @@ interface ManagerKpi {
         <!-- Manager tasks snapshot -->
         <div class="card-glass p-4">
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-foreground">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-50">
               {{ 'translate_dashboard_section-today-schedule' | translate }}
             </h3>
           </div>
@@ -161,16 +163,14 @@ interface ManagerKpi {
               @for (task of workerTasks; track task.id) {
                 <div class="flex items-center justify-between rounded-xl bg-black/20 px-3 py-2">
                   <div>
-                    <p class="text-sm text-foreground">
+                    <p class="text-sm text-slate-900 dark:text-slate-50">
                       {{ task.titleKey | translate }}
                     </p>
                     <p class="text-[11px] text-muted">
                       {{ task.fieldLabel }} • {{ task.timeLabel }}
                     </p>
                   </div>
-                  <span class="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
-                    {{ task.statusKey | translate }}
-                  </span>
+                  <app-ui-badge tone="emerald" [labelKey]="task.statusKey" />
                 </div>
               }
             </div>
@@ -184,7 +184,7 @@ interface ManagerKpi {
         <!-- Worker / field team schedule -->
         <div class="card-glass p-4 lg:col-span-2">
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-foreground">
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-50">
               {{ 'translate_dashboard_section-today-schedule' | translate }}
             </h3>
             <button
@@ -200,16 +200,14 @@ interface ManagerKpi {
               @for (task of workerTasks; track task.id) {
                 <div class="flex items-center justify-between rounded-xl bg-black/20 px-3 py-2">
                   <div>
-                    <p class="text-sm text-foreground">
+                    <p class="text-sm text-slate-900 dark:text-slate-50">
                       {{ task.titleKey | translate }}
                     </p>
                     <p class="text-[11px] text-muted">
                       {{ task.fieldLabel }} • {{ task.timeLabel }}
                     </p>
                   </div>
-                  <span class="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
-                    {{ task.statusKey | translate }}
-                  </span>
+                  <app-ui-badge tone="emerald" [labelKey]="task.statusKey" />
                 </div>
               }
             </div>

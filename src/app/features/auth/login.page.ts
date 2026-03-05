@@ -33,7 +33,7 @@ interface LoginModel {
           <p class="text-sm tracking-[0.25em] uppercase text-muted">
             {{ 'translate_app-name' | translate }}
           </p>
-          <h1 class="mt-2 text-2xl font-semibold text-foreground">
+          <h1 class="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
             {{ 'translate_login-welcome-title' | translate }}
           </h1>
           <p class="mt-1 text-muted">
@@ -45,7 +45,7 @@ interface LoginModel {
           <div class="space-y-2">
             <label
               for="email"
-              class="block text-sm font-medium text-foreground"
+              class="block text-sm font-medium text-slate-900 dark:text-slate-50"
               >{{ 'translate_email' | translate }}</label
             >
             <input
@@ -66,7 +66,7 @@ interface LoginModel {
           <div class="space-y-2">
             <label
               for="password"
-              class="block text-sm font-medium text-foreground"
+              class="block text-sm font-medium text-slate-900 dark:text-slate-50"
               >{{ 'translate_password' | translate }}</label
             >
             <input
@@ -100,7 +100,7 @@ interface LoginModel {
           >
             @if (loading()) {
               <span class="inline-flex items-center gap-2">
-                <span class="h-3 w-3 animate-spin rounded-full border border-foreground border-t-transparent"></span>
+                <span class="h-3 w-3 animate-spin rounded-full border border-slate-900 dark:border-slate-50 border-t-transparent"></span>
                 <span>{{ 'translate_login-submit-loading' | translate }}</span>
               </span>
             } @else {
@@ -131,7 +131,7 @@ interface LoginModel {
           </p>
           <a
             routerLink="/"
-            class="mt-2 inline-flex items-center justify-center text-xs font-medium text-foreground/80 underline underline-offset-4 hover:text-foreground"
+            class="mt-2 inline-flex items-center justify-center text-xs font-medium text-slate-900/80 dark:text-slate-50/80 underline underline-offset-4 hover:text-slate-900 dark:hover:text-slate-50"
           >
             {{ 'translate_home' | translate }}
           </a>

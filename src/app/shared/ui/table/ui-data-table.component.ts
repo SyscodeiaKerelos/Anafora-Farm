@@ -151,7 +151,7 @@ export interface TableRowActionEvent<T> {
         <tr class="border-b border-white/5 last:border-0">
           @for (column of columns(); track column.headerKey) {
             <td
-              class="py-2 px-3 text-xs text-foreground/90"
+              class="py-2 px-3 text-xs text-slate-900 dark:text-slate-50"
               [class.text-center]="column.align === 'center'"
               [class.text-right]="column.align === 'right'"
             >

@@ -71,6 +71,9 @@
   "translate_login-submit-loading": "Signing in...",
   "translate_login-google-label": "Continue with Google",
   "translate_logout-label": "Sign out",
+  "translate_profile-view-details": "View profile details",
+  "translate_confirm-signout-title": "Sign out",
+  "translate_confirm-signout-message": "Are you sure you want to sign out?",
   "translate_login-error-generic": "Unable to sign in. Please check your details and try again.",
   "translate_login-error-google": "Google sign-in failed. Please try again.",
 

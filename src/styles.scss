@@ -18,25 +18,41 @@ body {
 }
 
 .app-bg {
-  @apply min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-amber-900 text-slate-50 antialiased;
+  @apply min-h-screen bg-gradient-to-br from-slate-50 via-slate-100 to-amber-100 text-slate-900 antialiased dark:bg-gradient-to-br dark:from-slate-950 dark:via-slate-900 dark:to-amber-900 dark:text-slate-50;
 }
 
 .card-glass {
-  @apply rounded-3xl border border-white/15 bg-slate-900/55 shadow-2xl backdrop-blur-2xl;
+  @apply rounded-3xl border border-slate-200/70 bg-white/70 text-slate-900 shadow-2xl backdrop-blur-2xl dark:border-white/15 dark:bg-slate-900/55 dark:text-slate-50;
 }
 
 .input-glass {
-  @apply w-full rounded-2xl border border-white/15 bg-slate-900/40 px-4 py-3 text-sm text-slate-50 placeholder:text-slate-400 outline-none ring-0 transition focus:border-amber-400 focus:bg-slate-900/70 focus:ring-2 focus:ring-amber-400;
+  @apply w-full rounded-2xl border border-slate-200/70 bg-white/70 px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 outline-none ring-0 transition focus:border-amber-400 focus:bg-white/90 focus:ring-2 focus:ring-amber-400 dark:border-white/15 dark:bg-slate-900/40 dark:text-slate-50 dark:placeholder:text-slate-400 dark:focus:bg-slate-900/70;
 }
 
 .btn-primary {
-  @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-400 px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-lg shadow-amber-900/40 transition hover:bg-amber-300 hover:shadow-amber-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950;
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-400 px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-lg shadow-amber-500/40 transition hover:bg-amber-300 hover:shadow-amber-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-100 dark:shadow-amber-900/40 dark:focus-visible:ring-offset-slate-950;
 }
 
 .btn-ghost {
-  @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/5 px-5 py-2.5 text-sm font-semibold text-slate-50 shadow-md backdrop-blur-md transition hover:bg-white/10 hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950;
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/70 bg-white/40 px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-md backdrop-blur-md transition hover:bg-white/70 hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-100 dark:border-white/20 dark:bg-white/5 dark:text-slate-50 dark:hover:bg-white/10 dark:hover:border-white/30 dark:focus-visible:ring-offset-slate-950;
 }
 
 .text-muted {
-  @apply text-sm text-slate-400;
+  @apply text-sm text-slate-600 dark:text-slate-400;
+}
+
+/* Dropdown panel enter animation */
+.menu-surface-enter {
+  animation: menu-surface-enter 120ms ease-out;
+}
+
+@keyframes menu-surface-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

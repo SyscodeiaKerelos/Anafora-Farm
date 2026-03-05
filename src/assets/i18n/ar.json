@@ -71,6 +71,9 @@
   "translate_login-submit-loading": "جارٍ تسجيل الدخول...",
   "translate_login-google-label": "متابعة باستخدام Google",
   "translate_logout-label": "تسجيل الخروج",
+  "translate_profile-view-details": "عرض تفاصيل الحساب",
+  "translate_confirm-signout-title": "تسجيل الخروج",
+  "translate_confirm-signout-message": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
   "translate_login-error-generic": "تعذّر تسجيل الدخول. يرجى التحقق من البيانات والمحاولة مرة أخرى.",
   "translate_login-error-google": "فشل تسجيل الدخول باستخدام Google. يرجى المحاولة مرة أخرى.",
 
