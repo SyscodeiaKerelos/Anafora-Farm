@@ -1,0 +1,38 @@
+---
+description: Project-wide quality, Tailwind-only styling, and docs-first implementation standards.
+alwaysApply: true
+---
+
+## Dependency Injection Scope
+
+- **No `providedIn: 'root'` for app services**: Do not register application-defined services with `providedIn: 'root'`. Instead, scope services at the **route**, **feature**, or **component** level using Angular provider configuration.
+- **Module/feature scoping**: Prefer feature-level providers that are attached to routes or feature entrypoints. This keeps services easier to reason about, more testable, and more tree-shakeable.
+- **Exceptions**: It is acceptable for Angular core and third-party libraries to use `providedIn: 'root'` internally; do not attempt to change those.
+
+## Quality & Documentation First
+
+- **Docs before code**: Before using or configuring any external package (Tailwind, PrimeNG, Firebase, Angular features, etc.), review its **official documentation** for the current major version and follow recommended patterns.
+- **Code quality over speed**: Prefer clear, well-structured, and well-typed implementations over quick hacks or partial solutions. Avoid speculative shortcuts that deviate from documented usage.
+- **Align with Anafora design**: When adjusting the theme or layout, keep the calm, desert-retreat aesthetic of the main Anafora site (`https://anafora.org/`) in mind rather than default UI presets.
+
+## Styling & Theming
+
+- **Tailwind-only styles**: Do **not** introduce new `.scss` files or custom SCSS code. All new styling must use Tailwind utility classes, component utilities, or configuration.
+- **Tailwind configuration**:
+  - Use `tailwind.config.ts` as the single source of truth for theme tokens (colors, shadows, radii, etc.).
+  - Keep `src/styles.scss` limited to Tailwind entry, light global resets, and small utility classes that use `@apply`—no bespoke design systems in SCSS.
+- **Glassmorphism**:
+  - Reuse the shared glassmorphism utilities (e.g. `app-bg`, `card-glass`, `btn-primary`, `btn-ghost`, `input-glass`, `text-muted`) instead of re-inventing similar patterns.
+  - Prefer layered, translucent surfaces with subtle blur and warm accent colors over flat solid panels, matching the retreat aesthetic.
+
+## Auth, Roles, and Security
+
+- **Firebase usage**:
+  - Use the centralized helpers from `src/app/core/config/firebase.config.ts` instead of initializing Firebase ad hoc.
+  - Wrap Firebase Auth and Firestore access behind dedicated services (e.g. `AuthService`) that expose signals/observables and well-typed domain models.
+- **Roles**:
+  - Treat `superAdmin`, `admin`, and `user` as a strict hierarchy, encoded via a shared `Role` type and comparison helpers.
+  - Read roles from **custom claims** and mirrored Firestore `users` documents; do not attempt to set custom claims directly from the client—defer that to secure backend/Cloud Functions.
+- **Guards**:
+  - Use functional route guards for authentication and role checks, returning `UrlTree` redirects rather than side-effecting navigation where possible.
+

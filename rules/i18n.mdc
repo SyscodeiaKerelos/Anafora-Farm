@@ -1,0 +1,21 @@
+---
+alwaysApply: true
+---
+## Internationalization (i18n) Standards
+This document collects the i18n rules for the project. The Cursor agent reads the mirrored version in `.cursor/rules/i18n.mdc`.
+- **Two languages required**: All user‑facing text must be available in **English (`en`) and Arabic (`ar`)**.
+- **No hard‑coded UI text**:
+  - Do **not** place raw English or Arabic copy directly in templates or TypeScript if it can appear in the UI.
+  - Exception: brand names (`Anafora`, `Anafora Farm`) and obvious demo data (e.g. example product names, city names) may remain literal.
+- **Use translation keys**:
+  - Use the ngx‑translate pipe (`'KEY' | translate`) for all labels, headings, button text, helper copy, and notifications rendered in templates.
+  - In TypeScript, fetch translated strings via the project `TranslationService.instant('KEY')` instead of hard‑coded messages.
+- **Keep `en.json` and `ar.json` in sync**:
+  - When introducing a new key, **add it to both** `src/assets/i18n/en.json` and `src/assets/i18n/ar.json` in the same change.
+  - Do **not** merge with missing or placeholder translations.
+- **Key naming**:
+  - Use descriptive, UPPER_SNAKE_CASE keys grouped by feature where helpful (e.g. `LOGIN_SUBMIT_LABEL`, `ADMIN_USERS_ERROR_LOAD`).
+  - Prefer reusing shared keys (e.g. `EMAIL`, `PASSWORD`, `HOME`) over duplicating similar phrases.
+- **Error messages**:
+  - Map errors to translation keys in services (e.g. auth, admin) and render them via translate pipe or `TranslationService.instant`.
+  - Never throw or display raw English error messages from services.
