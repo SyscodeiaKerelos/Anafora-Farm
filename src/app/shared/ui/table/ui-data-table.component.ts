@@ -2,23 +2,25 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
-  ElementRef,
   inject,
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { InputTextModule } from 'primeng/inputtext';
+import { ContextMenuModule, ContextMenu } from 'primeng/contextmenu';
+import { MenuItem } from 'primeng/api';
 import { TranslatePipe } from '@ngx-translate/core';
+import { NgIcon } from '@ng-icons/core';
 
 import { UiButton } from '../button/ui-button.component';
 import { TableCellValuePipe } from './pipes/table-cell-value.pipe';
-import { TableRowIdPipe } from './pipes/table-row-id.pipe';
 import { TableActionIconPipe } from './pipes/table-action-icon.pipe';
+import { TranslationService } from '../../../core/services/translation.service';
 
 export type ColumnAlign = 'left' | 'center' | 'right';
 
@@ -69,6 +71,23 @@ export interface TableRowActionEvent<T> {
   row: T;
 }
 
+/** Map table action icon to PrimeIcons class (pi pi-fw pi-*). */
+function actionIconToPrimeIcon(icon: TableActionIcon | string | undefined): string {
+  if (!icon) return 'pi pi-fw pi-bars';
+  switch (icon) {
+    case 'view':
+      return 'pi pi-fw pi-search';
+    case 'edit':
+      return 'pi pi-fw pi-pencil';
+    case 'delete':
+      return 'pi pi-fw pi-trash';
+    case 'comment':
+      return 'pi pi-fw pi-comment';
+    default:
+      return typeof icon === 'string' ? icon : 'pi pi-fw pi-bars';
+  }
+}
+
 @Component({
   selector: 'app-ui-data-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -77,12 +96,12 @@ export interface TableRowActionEvent<T> {
     FormsModule,
     TableModule,
     InputTextModule,
+    ContextMenuModule,
     TranslatePipe,
+    NgIcon,
     UiButton,
-    TableCellValuePipe,
-    TableRowIdPipe,
-    TableActionIconPipe,
-  ],
+    TableCellValuePipe
+],
   host: {
     class: 'block w-full',
   },
@@ -145,58 +164,17 @@ export interface TableRowActionEvent<T> {
       </div>
     }
 
-    <!-- Mobile: card list (visible only below md) -->
-    <div class="block md:hidden space-y-3">
-      @if (loading()) {
-        <div class="rounded-xl border border-slate-200/50 bg-white/40 px-4 py-6 text-center text-xs text-muted dark:border-white/10 dark:bg-slate-900/40">
-          ...
-        </div>
-      } @else if (filteredRows().length === 0) {
-        <div class="rounded-xl border border-slate-200/50 bg-white/40 px-4 py-6 text-center text-xs text-muted dark:border-white/10 dark:bg-slate-900/40">
-          {{ emptyKey() | translate }}
-        </div>
-      } @else {
-        @for (row of filteredRows(); track $index) {
-          <article
-            class="rounded-xl border border-slate-200/70 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/60"
-          >
-            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-50 truncate">
-              @if (primaryColumn(); as primary) {
-                {{ row | tableCellValue : primary }}
-              }
-            </h3>
-            <dl class="mt-3 space-y-1.5">
-              @for (col of dataColumns(); track col.headerKey) {
-                <div class="flex flex-wrap items-baseline gap-x-2 text-xs">
-                  <dt class="shrink-0 text-muted">{{ col.headerKey | translate }}</dt>
-                  <dd class="min-w-0 text-slate-900 dark:text-slate-50">{{ row | tableCellValue : col }}</dd>
-                </div>
-              }
-            </dl>
-            @if (actionColumns().length) {
-              <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-200/50 pt-3 dark:border-white/10">
-                @for (col of actionColumns(); track col.headerKey) {
-                  @for (action of col.actions ?? []; track action.id) {
-                    <app-ui-button
-                      size="xs"
-                      class="min-w-[4.5rem]"
-                      [variant]="action.variant ?? 'ghost'"
-                      [labelKey]="action?.labelKey ?? null"
-                      [icon]="action | tableActionIcon"
-                      [disabled]="action.disabled ? action.disabled(row) : false"
-                      (click)="onRowAction(action.id, row)"
-                    />
-                  }
-                }
-              </div>
-            }
-          </article>
-        }
-      }
-    </div>
+    <!-- Table: same table layout on all screen sizes; horizontal scroll on small screens -->
+    <!-- Row actions: PrimeNG Context Menu (shown on 3-dots button click). appendTo="body" so the overlay is not clipped by the table's overflow and positions correctly. -->
+    <p-contextmenu
+      #rowContextMenu
+      [model]="contextMenuItems()"
+      appendTo="body"
+      (onHide)="contextMenuRow.set(null)"
 
-    <!-- Desktop: table (visible from md up) -->
-    <div class="hidden md:block overflow-x-auto -mx-1 sm:mx-0 rounded-lg border border-slate-200/50 dark:border-white/10">
+    />
+
+    <div class="overflow-x-auto -mx-1 sm:mx-0 rounded-lg border border-slate-200/50 dark:border-white/10">
       <p-table
         [value]="filteredRows()"
         [loading]="loading()"
@@ -227,39 +205,14 @@ export interface TableRowActionEvent<T> {
                 [class.text-right]="column.align === 'right'"
               >
                 @if (column.actions?.length) {
-                  <div class="relative inline-block">
-                    <button
-                      type="button"
-                      class="btn-ghost inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] min-w-[4.5rem]"
-                      (click)="toggleActionMenu(row)"
-                      [attr.aria-expanded]="openMenuRowId() === (row | tableRowId : rowIdKey())"
-                      [attr.aria-haspopup]="'true'"
-                    >
-                      <span>{{ 'translate_table-actions-menu' | translate }}</span>
-                      <span class="text-[8px] opacity-70" aria-hidden="true">&#9660;</span>
-                    </button>
-                    @if (openMenuRowId() === (row | tableRowId : rowIdKey())) {
-                      <div
-                        class="menu-surface menu-surface-enter absolute right-0 z-20 mt-1 w-44 rounded-xl border border-slate-200/70 bg-white/90 py-1 text-xs shadow-lg backdrop-blur dark:border-white/10 dark:bg-slate-900/90 dark:text-slate-50"
-                        role="menu"
-                      >
-                        @for (action of column.actions; track action.id) {
-                          <button
-                            type="button"
-                            role="menuitem"
-                            class="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-white/10 disabled:opacity-50"
-                            [disabled]="action.disabled ? action.disabled(row) : false"
-                            (click)="onMenuAction(action.id, row)"
-                          >
-                            @if (action | tableActionIcon; as iconClass) {
-                              <i [class]="iconClass" aria-hidden="true"></i>
-                            }
-                            <span>{{ (action.labelKey ?? '') | translate }}</span>
-                          </button>
-                        }
-                      </div>
-                    }
-                  </div>
+                  <button
+                    type="button"
+                    class="inline-flex items-center justify-center rounded-full p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+                    [attr.aria-label]="'translate_table-actions-menu' | translate"
+                    (click)="openRowContextMenu(row, column.actions ?? [], $event)"
+                  >
+                    <ng-icon name="faSolidEllipsisVertical" size="1rem" />
+                  </button>
                 } @else {
                   {{ row | tableCellValue : column }}
                 }
@@ -293,25 +246,10 @@ export class UiDataTable<T extends object = Record<string, unknown>> {
   readonly rowAction = output<TableRowActionEvent<T>>();
 
   protected readonly filterState = signal<Record<string, unknown>>({});
-  protected readonly openMenuRowId = signal<string | null>(null);
-  private readonly elementRef = inject(ElementRef<HTMLElement>);
-
-  constructor() {
-    effect(() => {
-      const openId = this.openMenuRowId();
-      if (openId === null) return;
-      const handler = (e: MouseEvent) => {
-        const el = this.elementRef.nativeElement;
-        if (el.contains(e.target as Node)) return;
-        this.openMenuRowId.set(null);
-      };
-      const t = setTimeout(() => document.addEventListener('click', handler, true), 0);
-      return () => {
-        clearTimeout(t);
-        document.removeEventListener('click', handler, true);
-      };
-    });
-  }
+  protected readonly contextMenuRow = signal<T | null>(null);
+  protected readonly contextMenuItems = signal<MenuItem[]>([]);
+  private readonly rowContextMenuRef = viewChild<ContextMenu>('rowContextMenu');
+  private readonly translation = inject(TranslationService);
 
   protected getRowId(row: T): string {
     const key = this.rowIdKey();
@@ -319,17 +257,25 @@ export class UiDataTable<T extends object = Record<string, unknown>> {
     return v !== undefined && v !== null ? String(v) : '';
   }
 
-  protected isActionMenuOpen(row: T): boolean {
-    return this.openMenuRowId() === this.getRowId(row);
+  protected openRowContextMenu(row: T, actions: TableAction<T>[], event: MouseEvent): void {
+    this.contextMenuRow.set(row);
+    this.contextMenuItems.set(this.buildContextMenuItems(row, actions));
+    this.rowContextMenuRef()?.show(event);
   }
 
-  protected toggleActionMenu(row: T): void {
-    const id = this.getRowId(row);
-    this.openMenuRowId.update((current) => (current === id ? null : id));
+  private buildContextMenuItems(row: T, actions: TableAction<T>[]): MenuItem[] {
+    return actions.map((action) => ({
+      label: this.translation.instant(action.labelKey ?? ''),
+      icon: actionIconToPrimeIcon(action.icon),
+      disabled: action.disabled?.(row) ?? false,
+      command: () => {
+        const r = this.contextMenuRow();
+        if (r) this.onRowAction(action.id, r);
+      },
+    }));
   }
 
   protected onMenuAction(actionId: string, row: T): void {
-    this.openMenuRowId.set(null);
     this.onRowAction(actionId, row);
   }
 

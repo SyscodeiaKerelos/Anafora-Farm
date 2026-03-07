@@ -8,9 +8,11 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  query,
+  where,
   serverTimestamp,
+  Timestamp,
 } from '@angular/fire/firestore';
-import { Timestamp } from 'firebase/firestore';
 
 import { Animal, AnimalWithSpecies, type AnimalVaccination } from '../../../core/types/animal';
 import type { AnimalStatus } from '../../../core/types/animal-status';
@@ -158,6 +160,27 @@ export class AnimalsService {
     }
   }
 
+  /**
+   * Finds an existing animal with the same speciesId and identifier (empty string and null treated as same).
+   * Returns the first matching document id if any.
+   */
+  private async findExistingBySpeciesAndIdentifier(
+    speciesId: string,
+    identifier: string | null,
+  ): Promise<{ id: string } | null> {
+    const coll = collection(this.firestore, this.animalsCollectionName);
+    const ident = identifier?.trim() ?? null;
+    const q = query(
+      coll,
+      where('speciesId', '==', speciesId),
+      where('identifier', '==', ident),
+    );
+    const snapshot = await getDocs(q);
+    const first = snapshot.docs[0];
+    if (!first) return null;
+    return { id: first.id };
+  }
+
   async getById(id: string): Promise<AnimalWithSpecies | null> {
     const animalRef = doc(this.firestore, this.animalsCollectionName, id);
     const animalSnap = await getDoc(animalRef);
@@ -230,24 +253,58 @@ export class AnimalsService {
         : null;
       const legacyVaccDate: Date | null =
         dto.vaccinationDate ?? (dto.vaccinations?.length ? dto.vaccinations[dto.vaccinations.length - 1].date : null);
-      const ref = await addDoc(collection(this.firestore, this.animalsCollectionName), {
+
+      const ident = dto.identifier?.trim() ?? null;
+      const existing = await this.findExistingBySpeciesAndIdentifier(dto.speciesId, ident);
+      if (existing) {
+        await this.update(existing.id, {
+          speciesId: dto.speciesId,
+          name: dto.name?.trim() || null,
+          identifier: ident,
+          status: dto.status,
+          birthDate: dto.birthDate,
+          vaccinationDate: legacyVaccDate,
+          vaccinations: dto.vaccinations?.length ? dto.vaccinations : undefined,
+        });
+        const updated = await this.getById(existing.id);
+        if (updated) {
+          return {
+            id: updated.id,
+            speciesId: updated.speciesId,
+            name: updated.name,
+            identifier: updated.identifier,
+            status: updated.status,
+            birthDate: updated.birthDate,
+            vaccinationDate: updated.vaccinationDate,
+            vaccinations: updated.vaccinations,
+            createdAt: updated.createdAt ?? new Date(),
+            updatedAt: updated.updatedAt ?? new Date(),
+            createdBy: updated.createdBy,
+          };
+        }
+      }
+
+      const payload: Record<string, unknown> = {
         speciesId: dto.speciesId,
         name: dto.name?.trim() || null,
-        identifier: dto.identifier?.trim() || null,
+        identifier: ident,
         status: dto.status,
         birthDate: dto.birthDate ? Timestamp.fromDate(dto.birthDate) : null,
         vaccinationDate: legacyVaccDate ? Timestamp.fromDate(legacyVaccDate) : null,
-        vaccinations: vaccinationsPayload ?? undefined,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         createdBy: uid,
-      });
+      };
+      if (vaccinationsPayload !== null) {
+        payload['vaccinations'] = vaccinationsPayload;
+      }
+      const ref = await addDoc(collection(this.firestore, this.animalsCollectionName), payload);
 
       return {
         id: ref.id,
         speciesId: dto.speciesId,
         name: dto.name?.trim() || null,
-        identifier: dto.identifier?.trim() || null,
+        identifier: ident,
         status: dto.status,
         birthDate: dto.birthDate,
         vaccinationDate: dto.vaccinationDate ?? (dto.vaccinations?.length ? dto.vaccinations[dto.vaccinations.length - 1].date : null),
@@ -256,7 +313,7 @@ export class AnimalsService {
         updatedAt: new Date(),
         createdBy: uid,
       };
-    } catch (err) {
+    } catch (err: unknown) {
       const msg = this.translation.instant('translate_animals-error-create');
       this.notification.showError(msg);
       throw err;
