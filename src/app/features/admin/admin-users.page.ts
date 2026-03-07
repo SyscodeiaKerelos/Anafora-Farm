@@ -61,12 +61,6 @@ import { AddUserDialogComponent } from './add-user-dialog.component';
           </div>
         </header>
 
-        @if (error()) {
-          <p class="text-xs text-red-400">
-            {{ error() }}
-          </p>
-        }
-
         <app-ui-data-table
           class="mt-2"
           [rows]="users()"
@@ -98,7 +92,6 @@ export class AdminUsersPage {
   protected readonly users = signal<AdminUser[]>([]);
   protected readonly loading = signal(true);
   protected readonly savingId = signal<string | null>(null);
-  protected readonly error = signal<string | null>(null);
 
   protected readonly canManage = computed(() => this.authService.hasAtLeastRole('superAdmin'));
   protected readonly addUserDialogOpen = signal(false);
@@ -174,7 +167,6 @@ export class AdminUsersPage {
 
   protected closeAddUserDialog(): void {
     this.addUserDialogOpen.set(false);
-    this.error.set(null);
   }
 
   protected onUserCreated(user: AdminUser): void {
@@ -200,17 +192,11 @@ export class AdminUsersPage {
     }
 
     this.loading.set(true);
-    this.error.set(null);
-
     try {
       const users = await this.userDirectory.loadAll();
       this.users.set(users);
-    } catch (err) {
-      if (typeof err === 'string') {
-        this.error.set(err);
-      } else {
-        this.error.set(this.translation.instant('translate_admin-users-error-load'));
-      }
+    } catch {
+      this.users.set([]);
     } finally {
       this.loading.set(false);
     }
@@ -222,19 +208,13 @@ export class AdminUsersPage {
     }
 
     this.savingId.set(id);
-    this.error.set(null);
-
     try {
       await this.userDirectory.updateRole(id, role);
       this.users.update((current) =>
         current.map((user) => (user.id === id ? { ...user, role } : user)),
       );
-    } catch (err) {
-      if (typeof err === 'string') {
-        this.error.set(err);
-      } else {
-        this.error.set(this.translation.instant('translate_admin-users-error-update'));
-      }
+    } catch {
+      // Error shown via NotificationService in UserDirectoryService
     } finally {
       this.savingId.set(null);
     }

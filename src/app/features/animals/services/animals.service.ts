@@ -4,17 +4,19 @@ import {
   collection,
   doc,
   getDocs,
-  addDoc,
   getDoc,
+  addDoc,
   updateDoc,
+  deleteDoc,
   serverTimestamp,
 } from '@angular/fire/firestore';
 import { Timestamp } from 'firebase/firestore';
 
-import { Animal, AnimalWithSpecies } from '../../../core/types/animal';
+import { Animal, AnimalWithSpecies, type AnimalVaccination } from '../../../core/types/animal';
 import type { AnimalStatus } from '../../../core/types/animal-status';
 import type { ReproductionType } from '../../../core/types/species';
 import { AuthService } from '../../../core/services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { TranslationService } from '../../../core/services/translation.service';
 
 export interface CreateAnimalDto {
@@ -24,6 +26,7 @@ export interface CreateAnimalDto {
   status: AnimalStatus;
   birthDate: Date | null;
   vaccinationDate: Date | null;
+  vaccinations?: AnimalVaccination[];
 }
 
 export interface UpdateAnimalDto {
@@ -33,6 +36,7 @@ export interface UpdateAnimalDto {
   status?: AnimalStatus;
   birthDate?: Date | null;
   vaccinationDate?: Date | null;
+  vaccinations?: AnimalVaccination[];
 }
 
 interface SpeciesInfo {
@@ -45,13 +49,11 @@ interface SpeciesInfo {
 export class AnimalsService {
   private readonly firestore = inject(Firestore);
   private readonly auth = inject(AuthService);
+  private readonly notification = inject(NotificationService);
   private readonly translation = inject(TranslationService);
 
   private readonly _loading = signal(false);
-  private readonly _error = signal<string | null>(null);
-
   readonly loading = this._loading.asReadonly();
-  readonly error = this._error.asReadonly();
 
   readonly animalsCollectionName = 'animals';
   readonly speciesCollectionName = 'species';
@@ -66,10 +68,25 @@ export class AnimalsService {
     return null;
   }
 
+  private static parseVaccinations(arr: unknown): AnimalVaccination[] {
+    if (!Array.isArray(arr)) return [];
+    const out: AnimalVaccination[] = [];
+    for (const item of arr) {
+      if (item && typeof item === 'object' && 'name' in item && 'date' in item) {
+        const date = AnimalsService.toDate((item as { date?: unknown }).date);
+        if (date) {
+          out.push({
+            name: String((item as { name?: string }).name ?? '').trim() || '—',
+            date,
+          });
+        }
+      }
+    }
+    return out;
+  }
+
   async loadAll(): Promise<AnimalWithSpecies[]> {
     this._loading.set(true);
-    this._error.set(null);
-
     try {
       const [speciesSnapshot, animalsSnapshot] = await Promise.all([
         getDocs(collection(this.firestore, this.speciesCollectionName)),
@@ -101,6 +118,7 @@ export class AnimalsService {
           status?: AnimalStatus;
           birthDate?: unknown;
           vaccinationDate?: unknown;
+          vaccinations?: { name?: string; date?: unknown }[];
           createdAt?: unknown;
           updatedAt?: unknown;
           createdBy?: string | null;
@@ -110,6 +128,8 @@ export class AnimalsService {
           nameAr: '',
           reproductionType: 'gives_birth' as ReproductionType,
         };
+        const vaccinations = AnimalsService.parseVaccinations(data.vaccinations);
+        const legacyVaccDate = AnimalsService.toDate(data.vaccinationDate);
         list.push({
           id: docSnapshot.id,
           speciesId: data.speciesId ?? '',
@@ -117,7 +137,8 @@ export class AnimalsService {
           identifier: data.identifier ?? null,
           status: (data.status ?? 'alive') as AnimalStatus,
           birthDate: AnimalsService.toDate(data.birthDate),
-          vaccinationDate: AnimalsService.toDate(data.vaccinationDate),
+          vaccinationDate: legacyVaccDate ?? (vaccinations.length ? vaccinations[vaccinations.length - 1].date : null),
+          vaccinations: vaccinations.length ? vaccinations : undefined,
           createdAt: AnimalsService.toDate(data.createdAt),
           updatedAt: AnimalsService.toDate(data.updatedAt),
           createdBy: data.createdBy ?? null,
@@ -128,10 +149,10 @@ export class AnimalsService {
       });
 
       return list;
-    } catch {
+    } catch (err) {
       const msg = this.translation.instant('translate_animals-error-load');
-      this._error.set(msg);
-      throw msg;
+      this.notification.showError(msg);
+      throw err;
     } finally {
       this._loading.set(false);
     }
@@ -151,6 +172,7 @@ export class AnimalsService {
       status?: AnimalStatus;
       birthDate?: unknown;
       vaccinationDate?: unknown;
+      vaccinations?: { name?: string; date?: unknown }[];
       createdAt?: unknown;
       updatedAt?: unknown;
       createdBy?: string | null;
@@ -176,6 +198,8 @@ export class AnimalsService {
       }
     }
 
+    const vaccinations = AnimalsService.parseVaccinations(data.vaccinations);
+    const legacyVaccDate = AnimalsService.toDate(data.vaccinationDate);
     return {
       id: animalSnap.id,
       speciesId: data.speciesId ?? '',
@@ -183,7 +207,8 @@ export class AnimalsService {
       identifier: data.identifier ?? null,
       status: (data.status ?? 'alive') as AnimalStatus,
       birthDate: AnimalsService.toDate(data.birthDate),
-      vaccinationDate: AnimalsService.toDate(data.vaccinationDate),
+      vaccinationDate: legacyVaccDate ?? (vaccinations.length ? vaccinations[vaccinations.length - 1].date : null),
+      vaccinations: vaccinations.length ? vaccinations : undefined,
       createdAt: AnimalsService.toDate(data.createdAt),
       updatedAt: AnimalsService.toDate(data.updatedAt),
       createdBy: data.createdBy ?? null,
@@ -196,13 +221,23 @@ export class AnimalsService {
   async add(dto: CreateAnimalDto): Promise<Animal> {
     const uid = this.auth.user()?.uid ?? null;
     try {
+      const vaccinationsPayload =
+        dto.vaccinations?.length ?
+          dto.vaccinations.map((v) => ({
+            name: v.name?.trim() || '—',
+            date: Timestamp.fromDate(v.date),
+          }))
+        : null;
+      const legacyVaccDate: Date | null =
+        dto.vaccinationDate ?? (dto.vaccinations?.length ? dto.vaccinations[dto.vaccinations.length - 1].date : null);
       const ref = await addDoc(collection(this.firestore, this.animalsCollectionName), {
         speciesId: dto.speciesId,
         name: dto.name?.trim() || null,
         identifier: dto.identifier?.trim() || null,
         status: dto.status,
         birthDate: dto.birthDate ? Timestamp.fromDate(dto.birthDate) : null,
-        vaccinationDate: dto.vaccinationDate ? Timestamp.fromDate(dto.vaccinationDate) : null,
+        vaccinationDate: legacyVaccDate ? Timestamp.fromDate(legacyVaccDate) : null,
+        vaccinations: vaccinationsPayload ?? undefined,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         createdBy: uid,
@@ -215,14 +250,15 @@ export class AnimalsService {
         identifier: dto.identifier?.trim() || null,
         status: dto.status,
         birthDate: dto.birthDate,
-        vaccinationDate: dto.vaccinationDate,
+        vaccinationDate: dto.vaccinationDate ?? (dto.vaccinations?.length ? dto.vaccinations[dto.vaccinations.length - 1].date : null),
+        vaccinations: dto.vaccinations,
         createdAt: new Date(),
         updatedAt: new Date(),
         createdBy: uid,
       };
     } catch (err) {
       const msg = this.translation.instant('translate_animals-error-create');
-      this._error.set(msg);
+      this.notification.showError(msg);
       throw err;
     }
   }
@@ -244,11 +280,30 @@ export class AnimalsService {
           ? Timestamp.fromDate(dto['vaccinationDate'])
           : null;
       }
+      if (dto['vaccinations'] !== undefined) {
+        payload['vaccinations'] =
+          dto['vaccinations']?.length ?
+            dto['vaccinations'].map((v) => ({
+              name: v.name?.trim() || '—',
+              date: Timestamp.fromDate(v.date),
+            }))
+          : null;
+      }
       await updateDoc(doc(this.firestore, this.animalsCollectionName, id), payload);
-    } catch {
+    } catch (err) {
       const msg = this.translation.instant('translate_animals-error-update');
-      this._error.set(msg);
-      throw msg;
+      this.notification.showError(msg);
+      throw err;
+    }
+  }
+
+  async delete(id: string): Promise<void> {
+    try {
+      await deleteDoc(doc(this.firestore, this.animalsCollectionName, id));
+    } catch (err) {
+      const msg = this.translation.instant('translate_animals-error-delete');
+      this.notification.showError(msg);
+      throw err;
     }
   }
 }

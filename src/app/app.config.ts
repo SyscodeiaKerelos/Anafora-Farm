@@ -1,9 +1,10 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners, APP_INITIALIZER } from '@angular/core';
+import { ErrorHandler } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { providePrimeNG } from 'primeng/config';
-import { TranslateLoader, provideTranslateService } from '@ngx-translate/core';
-import { provideTranslateHttpLoader, TranslateHttpLoader } from '@ngx-translate/http-loader';
+import { provideTranslateService } from '@ngx-translate/core';
+import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import Aura from '@primeuix/themes/aura';
 import { provideIcons } from '@ng-icons/core';
 import { provideFirebaseApp, FirebaseApp } from '@angular/fire/app';
@@ -15,10 +16,25 @@ import { initializeApp } from '@angular/fire/app';
 import { TranslationService } from './core/services/translation.service';
 import { AuthService } from './core/services/auth.service';
 import { UserDirectoryService } from './core/services/user-directory.service';
+import { GlobalErrorHandler } from './core/errors/global-error.handler';
+import { httpErrorInterceptor } from './core/interceptors/http-error.interceptor';
 import { environment } from '../environments/environment';
+import { TranslateService } from '@ngx-translate/core';
+import { firstValueFrom } from 'rxjs';
 
-export function createTranslateLoader() {
-  return new TranslateHttpLoader();
+function getInitialLang(): 'en' | 'ar' {
+  if (typeof localStorage === 'undefined') return 'en';
+  const saved = localStorage.getItem('app-language') as 'en' | 'ar' | null;
+  if (saved === 'en' || saved === 'ar') return saved;
+  const browser = typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : '';
+  return browser === 'ar' ? 'ar' : 'en';
+}
+
+export function initTranslations(translate: TranslateService): () => Promise<unknown> {
+  return () => {
+    const lang = getInitialLang();
+    return firstValueFrom(translate.use(lang));
+  };
 }
 
 export function initializeFirebase() {
@@ -28,19 +44,18 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(),
+    // provideHttpClient(),
+    provideHttpClient(withInterceptors([httpErrorInterceptor])),
+    { provide: ErrorHandler, useClass: GlobalErrorHandler },
     provideFirebaseApp(() => initializeFirebase()),
     provideFirestore((injector) => getFirestore(injector.get(FirebaseApp))),
-    {
-      provide: TranslateLoader,
-      useFactory: createTranslateLoader,
-    },
     provideTranslateService({
       loader: provideTranslateHttpLoader({
         prefix: '/assets/i18n/',
-        suffix: '.json'
+        suffix: '.json',
       }),
       fallbackLang: 'en',
+      lang: 'en',
     }),
     providePrimeNG({
       theme: {

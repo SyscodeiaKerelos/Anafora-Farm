@@ -176,9 +176,6 @@ const STATUS_KEYS: Record<AnimalStatus, string> = {
               </div>
             </div>
           }
-          @if (commentError()) {
-            <p class="text-xs text-red-400">{{ commentError() }}</p>
-          }
           <button
             type="submit"
             class="btn-primary w-full sm:w-auto px-4 py-2 sm:py-1.5 text-xs"
@@ -212,7 +209,6 @@ export class AnimalDetailPage {
   protected readonly medicineDose = signal('');
   protected readonly nextDoseDate = signal('');
   protected readonly addingComment = signal(false);
-  protected readonly commentError = signal<string | null>(null);
 
   protected readonly statusLabel = computed(() => {
     const a = this.animal();
@@ -280,7 +276,6 @@ export class AnimalDetailPage {
     const text = this.commentText().trim();
     if (!text || !this.animal()) return;
     this.addingComment.set(true);
-    this.commentError.set(null);
     const type = this.commentType();
     const nextDate = this.nextDoseDate().trim()
       ? new Date(this.nextDoseDate())
@@ -298,10 +293,8 @@ export class AnimalDetailPage {
       this.medicineName.set('');
       this.medicineDose.set('');
       this.nextDoseDate.set('');
-    } catch (err) {
-      this.commentError.set(
-        typeof err === 'string' ? err : this.translation.instant('translate_animals-comments-error-create'),
-      );
+    } catch {
+      // Error already shown via NotificationService in AnimalCommentsService
     } finally {
       this.addingComment.set(false);
     }

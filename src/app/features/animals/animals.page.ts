@@ -16,6 +16,7 @@ import {
   type FilterConfig,
   type TableRowActionEvent,
 } from '../../shared/ui/table/ui-data-table.component';
+import { UiConfirmDialog } from '../../shared/ui/dialog/ui-confirm-dialog.component';
 import {
   AddAnimalDialogComponent,
   SpeciesSectionComponent,
@@ -46,6 +47,7 @@ interface AnimalRow extends AnimalWithSpecies {
     CommonModule,
     TranslatePipe,
     UiDataTable,
+    UiConfirmDialog,
     AddAnimalDialogComponent,
     SpeciesSectionComponent,
   ],
@@ -63,29 +65,23 @@ interface AnimalRow extends AnimalWithSpecies {
             {{ 'translate_animals-subtitle' | translate }}
           </p>
         </div>
-        <div class="flex flex-shrink-0 gap-2">
+        <div class="flex flex-shrink-0 gap-1.5">
           <button
             type="button"
-            class="btn-primary flex-1 sm:flex-none px-3 py-2 sm:px-4 sm:py-1.5 text-xs"
+            class="btn-primary inline-flex items-center justify-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium"
             (click)="openAddDialog()"
           >
             {{ 'translate_animals-add-animal' | translate }}
           </button>
           <button
             type="button"
-            class="btn-ghost flex-1 sm:flex-none px-3 py-2 sm:px-4 sm:py-1.5 text-xs"
+            class="btn-ghost inline-flex items-center justify-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium"
             (click)="reload()"
           >
             {{ 'translate_animals-refresh' | translate }}
           </button>
         </div>
       </header>
-
-      @if (error()) {
-        <p class="text-xs text-red-400">
-          {{ error() }}
-        </p>
-      }
 
       @if (speciesList().length === 0) {
         <p class="text-xs text-muted">
@@ -104,7 +100,7 @@ interface AnimalRow extends AnimalWithSpecies {
           class="mt-2"
           [rows]="tableRows()"
           [loading]="loading()"
-          [columns]="columns"
+          [columns]="columns()"
           [filters]="filters()"
           emptyKey="translate_animals-empty"
           (rowAction)="onRowAction($event)"
@@ -124,6 +120,15 @@ interface AnimalRow extends AnimalWithSpecies {
       (saved)="onAnimalSaved()"
       (closed)="closeAddDialog()"
     />
+
+    <app-ui-confirm-dialog
+      [open]="deleteConfirmOpen()"
+      [titleKey]="'translate_animals-delete-confirm-title'"
+      [messageKey]="'translate_animals-delete-confirm-message'"
+      [confirmLabelKey]="'translate_animals-delete'"
+      (confirmed)="confirmDelete()"
+      (cancelled)="cancelDelete()"
+    />
   `,
 })
 export class AnimalsPage {
@@ -136,15 +141,16 @@ export class AnimalsPage {
   protected readonly speciesList = signal<Species[]>([]);
   protected readonly loading = signal(true);
   protected readonly speciesLoading = signal(true);
-  protected readonly error = signal<string | null>(null);
   protected readonly addDialogOpen = signal(false);
   protected readonly editingAnimal = signal<AnimalWithSpecies | null>(null);
+  protected readonly deleteConfirmOpen = signal(false);
+  protected readonly animalToDelete = signal<AnimalRow | null>(null);
 
   protected readonly tableRows = computed<AnimalRow[]>(() => {
     return this.animals().map((a) => this.toRow(a));
   });
 
-  protected readonly columns: ColumnConfig<AnimalRow>[] = [
+  private readonly allColumns: ColumnConfig<AnimalRow>[] = [
     {
       headerKey: 'translate_name',
       field: 'displayName',
@@ -184,11 +190,38 @@ export class AnimalsPage {
       headerKey: 'translate_actions',
       align: 'right',
       actions: [
-        { id: 'view', labelKey: 'translate_animals-view-details', variant: 'ghost' },
-        { id: 'edit', labelKey: 'translate_animals-edit', variant: 'primary' },
+        { id: 'view', labelKey: 'translate_animals-view-details', variant: 'ghost', icon: 'view' },
+        { id: 'edit', labelKey: 'translate_animals-edit', variant: 'ghost', icon: 'edit' },
+        { id: 'delete', labelKey: 'translate_animals-delete', variant: 'ghost', icon: 'delete' },
+        { id: 'comment', labelKey: 'translate_animals-add-comment', variant: 'ghost', icon: 'comment' },
       ],
     },
   ];
+
+  /** Optional data columns (hidden when no row has data in that field). */
+  private readonly optionalColumnFields: (keyof AnimalRow)[] = [
+    'birthDateDisplay',
+    'vaccinationDateDisplay',
+    'ageDisplay',
+  ];
+
+  protected readonly columns = computed<ColumnConfig<AnimalRow>[]>(() => {
+    const rows = this.tableRows();
+    const optionalFieldsWithData = new Set<keyof AnimalRow>();
+    for (const row of rows) {
+      for (const field of this.optionalColumnFields) {
+        const v = row[field];
+        if (v !== undefined && v !== null && String(v).trim() !== '') {
+          optionalFieldsWithData.add(field);
+        }
+      }
+    }
+    return this.allColumns.filter((col) => {
+      if (!col.field) return true;
+      if (!this.optionalColumnFields.includes(col.field as keyof AnimalRow)) return true;
+      return optionalFieldsWithData.has(col.field as keyof AnimalRow);
+    });
+  });
 
   protected readonly filters = computed<FilterConfig<AnimalRow>[]>(() => {
     const lang = this.translation.currentLang();
@@ -265,7 +298,6 @@ export class AnimalsPage {
   protected closeAddDialog(): void {
     this.addDialogOpen.set(false);
     this.editingAnimal.set(null);
-    this.error.set(null);
   }
 
   protected onRowAction(event: TableRowActionEvent<AnimalRow>): void {
@@ -277,6 +309,32 @@ export class AnimalsPage {
       this.editingAnimal.set(event.row);
       this.addDialogOpen.set(true);
     }
+    if (event.actionId === 'delete') {
+      this.animalToDelete.set(event.row);
+      this.deleteConfirmOpen.set(true);
+    }
+    if (event.actionId === 'comment') {
+      void this.router.navigate(['/animals', event.row.id]);
+    }
+  }
+
+  protected confirmDelete(): void {
+    const row = this.animalToDelete();
+    if (!row) {
+      this.cancelDelete();
+      return;
+    }
+    this.animalsService.delete(row.id).then(() => {
+      this.cancelDelete();
+      void this.reload();
+    }).catch(() => {
+      this.cancelDelete();
+    });
+  }
+
+  protected cancelDelete(): void {
+    this.deleteConfirmOpen.set(false);
+    this.animalToDelete.set(null);
   }
 
   protected onAnimalSaved(): void {
@@ -298,12 +356,11 @@ export class AnimalsPage {
 
   async reload(): Promise<void> {
     this.loading.set(true);
-    this.error.set(null);
     try {
       const list = await this.animalsService.loadAll();
       this.animals.set(list);
-    } catch (err) {
-      this.error.set(typeof err === 'string' ? err : this.translation.instant('translate_animals-error-load'));
+    } catch {
+      this.animals.set([]);
     } finally {
       this.loading.set(false);
     }

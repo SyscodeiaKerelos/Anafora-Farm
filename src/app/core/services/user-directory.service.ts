@@ -11,6 +11,7 @@ import {
 
 import { AdminUser } from '../types/admin-user';
 import { Role } from '../types/role';
+import { NotificationService } from './notification.service';
 import { TranslationService } from './translation.service';
 
 export interface CreateUserDto {
@@ -24,18 +25,14 @@ export interface CreateUserDto {
 export class UserDirectoryService {
   // ✅ Inject via Angular DI — never call getFirebaseDb() manually
   private readonly firestore = inject(Firestore);
+  private readonly notification = inject(NotificationService);
   private readonly translation = inject(TranslationService);
 
   private readonly _loading = signal(false);
-  private readonly _error = signal<string | null>(null);
-
   readonly loading = this._loading.asReadonly();
-  readonly error = this._error.asReadonly();
 
   async loadAll(): Promise<AdminUser[]> {
     this._loading.set(true);
-    this._error.set(null);
-
     try {
       const snapshot = await getDocs(collection(this.firestore, 'users'));
       const users: AdminUser[] = [];
@@ -55,10 +52,10 @@ export class UserDirectoryService {
       });
 
       return users;
-    } catch {
+    } catch (err) {
       const msg = this.translation.instant('translate_admin-users-error-load');
-      this._error.set(msg);
-      throw msg;
+      this.notification.showError(msg);
+      throw err;
     } finally {
       this._loading.set(false);
     }
@@ -84,7 +81,7 @@ export class UserDirectoryService {
       };
     } catch (err) {
       const msg = this.translation.instant('translate_admin-users-error-create');
-      this._error.set(msg);
+      this.notification.showError(msg);
       throw err;
     }
   }
@@ -95,10 +92,10 @@ export class UserDirectoryService {
         role,
         updatedAt: serverTimestamp(),
       });
-    } catch {
+    } catch (err) {
       const msg = this.translation.instant('translate_admin-users-error-update');
-      this._error.set(msg);
-      throw msg;
+      this.notification.showError(msg);
+      throw err;
     }
   }
 
@@ -110,10 +107,10 @@ export class UserDirectoryService {
         disabledReason: reason ?? null,
         updatedAt: serverTimestamp(),
       });
-    } catch {
+    } catch (err) {
       const msg = this.translation.instant('translate_admin-users-error-update');
-      this._error.set(msg);
-      throw msg;
+      this.notification.showError(msg);
+      throw err;
     }
   }
 }

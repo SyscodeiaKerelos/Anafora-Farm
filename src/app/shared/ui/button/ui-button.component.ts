@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 
 type ButtonVariant = 'primary' | 'ghost' | 'danger' | 'outline';
-type ButtonSize = 'sm' | 'md';
+type ButtonSize = 'xs' | 'sm' | 'md';
 type ButtonType = 'button' | 'submit';
 type IconPosition = 'left' | 'right';
 
@@ -21,9 +21,14 @@ type IconPosition = 'left' | 'right';
     <button
       [attr.type]="type()"
       [disabled]="disabled() || loading()"
-      class="inline-flex items-center gap-2 rounded-full"
+      class="inline-flex items-center gap-1.5 rounded-full"
+      [class.px-2]="size() === 'xs'"
+      [class.py-0.5]="size() === 'xs'"
+      [class.text-[11px]]="size() === 'xs'"
       [class.px-3]="size() === 'sm'"
       [class.py-1]="size() === 'sm'"
+      [class.px-5]="size() === 'md'"
+      [class.py-2.5]="size() === 'md'"
     >
       @if (loading()) {
         <span class="inline-flex items-center gap-2">
