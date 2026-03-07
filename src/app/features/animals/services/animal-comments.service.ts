@@ -14,6 +14,7 @@ import { Timestamp } from 'firebase/firestore';
 import { AnimalComment } from '../../../core/types/animal-comment';
 import type { AnimalCommentType } from '../../../core/types/animal-comment';
 import { AuthService } from '../../../core/services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { TranslationService } from '../../../core/services/translation.service';
 
 export interface CreateAnimalCommentDto {
@@ -28,13 +29,11 @@ export interface CreateAnimalCommentDto {
 export class AnimalCommentsService {
   private readonly firestore = inject(Firestore);
   private readonly auth = inject(AuthService);
+  private readonly notification = inject(NotificationService);
   private readonly translation = inject(TranslationService);
 
   private readonly _loading = signal(false);
-  private readonly _error = signal<string | null>(null);
-
   readonly loading = this._loading.asReadonly();
-  readonly error = this._error.asReadonly();
 
   private static toDate(value: unknown): Date | null {
     if (value instanceof Timestamp) {
@@ -48,8 +47,6 @@ export class AnimalCommentsService {
 
   async loadComments(animalId: string): Promise<AnimalComment[]> {
     this._loading.set(true);
-    this._error.set(null);
-
     try {
       const commentsRef = collection(
         this.firestore,
@@ -84,10 +81,10 @@ export class AnimalCommentsService {
       });
 
       return list;
-    } catch {
+    } catch (err) {
       const msg = this.translation.instant('translate_animals-comments-error-load');
-      this._error.set(msg);
-      throw msg;
+      this.notification.showError(msg);
+      throw err;
     } finally {
       this._loading.set(false);
     }
@@ -98,8 +95,8 @@ export class AnimalCommentsService {
     const text = dto.text.trim();
     if (!text) {
       const msg = this.translation.instant('translate_animals-comments-error-text-required');
-      this._error.set(msg);
-      throw msg;
+      this.notification.showError(msg);
+      throw new Error(msg);
     }
 
     try {
@@ -134,7 +131,7 @@ export class AnimalCommentsService {
       };
     } catch (err) {
       const msg = this.translation.instant('translate_animals-comments-error-create');
-      this._error.set(msg);
+      this.notification.showError(msg);
       throw err;
     }
   }

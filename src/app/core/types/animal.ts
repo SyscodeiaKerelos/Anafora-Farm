@@ -1,5 +1,11 @@
 import type { AnimalStatus } from './animal-status';
 
+/** Single vaccination entry: vaccine name and date. */
+export interface AnimalVaccination {
+  name: string;
+  date: Date;
+}
+
 export interface Animal {
   id: string;
   speciesId: string;
@@ -7,7 +13,10 @@ export interface Animal {
   identifier: string | null;
   status: AnimalStatus;
   birthDate: Date | null;
+  /** @deprecated Prefer vaccinations[].date; kept for backward compatibility. */
   vaccinationDate: Date | null;
+  /** Vaccination records (name + date). When present, preferred over vaccinationDate. */
+  vaccinations?: AnimalVaccination[];
   createdAt: Date | null;
   updatedAt: Date | null;
   createdBy: string | null;

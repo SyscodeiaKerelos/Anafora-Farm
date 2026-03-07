@@ -11,26 +11,23 @@ import { Timestamp } from 'firebase/firestore';
 
 import type { ReproductionType } from '../../../core/types/species';
 import { Species } from '../../../core/types/species';
+import { NotificationService } from '../../../core/services/notification.service';
 import { TranslationService } from '../../../core/services/translation.service';
 import { PREDEFINED_SPECIES, normalizeReproductionType } from '../data/predefined-species';
 
 @Injectable()
 export class SpeciesService {
   private readonly firestore = inject(Firestore);
+  private readonly notification = inject(NotificationService);
   private readonly translation = inject(TranslationService);
 
   private readonly _loading = signal(false);
-  private readonly _error = signal<string | null>(null);
-
   readonly loading = this._loading.asReadonly();
-  readonly error = this._error.asReadonly();
 
   readonly collectionName = 'species';
 
   async loadAll(): Promise<Species[]> {
     this._loading.set(true);
-    this._error.set(null);
-
     try {
       const snapshot = await getDocs(collection(this.firestore, this.collectionName));
       const list: Species[] = [];
@@ -88,10 +85,10 @@ export class SpeciesService {
       }
 
       return list;
-    } catch {
+    } catch (err) {
       const msg = this.translation.instant('translate_animals-species-error-load');
-      this._error.set(msg);
-      throw msg;
+      this.notification.showError(msg);
+      throw err;
     } finally {
       this._loading.set(false);
     }

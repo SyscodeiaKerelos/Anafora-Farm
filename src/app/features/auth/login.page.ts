@@ -10,6 +10,7 @@ import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/services/auth.service';
+import { NotificationService } from '../../core/services/notification.service';
 import { TranslationService } from '../../core/services/translation.service';
 
 
@@ -87,12 +88,6 @@ interface LoginModel {
             }
           </div>
 
-          @if (error()) {
-            <p class="rounded-xl bg-red-500/10 px-3 py-2 text-xs text-red-300">
-              {{ error() }}
-            </p>
-          }
-
           <button
             type="submit"
             class="btn-primary w-full"
@@ -163,15 +158,13 @@ export class LoginPage {
   });
 
   protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
+  private readonly notification = inject(NotificationService);
 
   async onSubmit(event: Event): Promise<void> {
     event.preventDefault();
 
     await submit(this.loginForm, async () => {
       this.loading.set(true);
-      this.error.set(null);
-
       try {
         await this.authService.loginWithEmailPassword(this.model());
         await this.router.navigateByUrl('/');
@@ -179,7 +172,7 @@ export class LoginPage {
         const message =
           this.authService.mapAuthErrorToMessage(err) ??
           this.translation.instant('translate_login-error-generic');
-        this.error.set(message);
+        this.notification.showError(message);
       } finally {
         this.loading.set(false);
       }
@@ -192,8 +185,6 @@ export class LoginPage {
     }
 
     this.loading.set(true);
-    this.error.set(null);
-
     try {
       await this.authService.loginWithGoogle();
       await this.router.navigateByUrl('/');
@@ -201,7 +192,7 @@ export class LoginPage {
       const message =
         this.authService.mapAuthErrorToMessage(err) ??
         this.translation.instant('translate_login-error-google');
-      this.error.set(message);
+      this.notification.showError(message);
     } finally {
       this.loading.set(false);
     }

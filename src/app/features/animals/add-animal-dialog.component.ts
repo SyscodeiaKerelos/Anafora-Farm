@@ -21,8 +21,10 @@ import type { AnimalStatus } from '../../core/types/animal-status';
 import { AnimalWithSpecies } from '../../core/types/animal';
 import type { Species } from '../../core/types/species';
 import { AnimalsService } from './services/animals.service';
+import { AnimalCommentsService } from './services/animal-comments.service';
 import { TranslationService } from '../../core/services/translation.service';
 import { UiButton } from '../../shared/ui/button/ui-button.component';
+import { SpeciesDisplayNamePipe } from '../../shared/pipes/species-display-name.pipe';
 
 const STATUS_OPTIONS: { value: AnimalStatus; labelKey: string }[] = [
   { value: 'newborn', labelKey: 'translate_animals-status-newborn' },
@@ -41,10 +43,16 @@ interface AddAnimalModel {
   vaccinationDate: string;
 }
 
+interface VaccinationEntry {
+  id: string;
+  name: string;
+  date: string;
+}
+
 @Component({
   selector: 'app-add-animal-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormField, TranslatePipe, UiButton],
+  imports: [CommonModule, FormField, TranslatePipe, UiButton, SpeciesDisplayNamePipe],
   template: `
     @if (open()) {
       <div
@@ -56,7 +64,7 @@ interface AddAnimalModel {
         (keydown.escape)="onEscape()"
       >
         <div
-          class="card-glass max-w-md w-full rounded-xl sm:rounded-2xl px-4 py-4 sm:px-5 sm:py-5 text-xs shadow-2xl my-auto max-h-[calc(100vh-2rem)] overflow-y-auto"
+          class="card-glass max-w-md w-full min-w-0 rounded-xl sm:rounded-2xl px-4 py-4 sm:px-5 sm:py-5 text-xs shadow-2xl my-auto max-h-[calc(100vh-2rem)] overflow-y-auto"
           (click)="$event.stopPropagation()"
         >
           <h2
@@ -79,8 +87,8 @@ interface AddAnimalModel {
               />
             </div>
           } @else {
-          <form (submit)="onSubmit($event)" class="mt-4 space-y-3">
-            <div class="space-y-1">
+          <form (submit)="onSubmit($event)" class="mt-4 space-y-3 min-w-0">
+            <div class="space-y-1 min-w-0">
               <label
                 for="animal-species"
                 class="block text-[11px] font-semibold text-slate-900 dark:text-slate-50"
@@ -90,12 +98,12 @@ interface AddAnimalModel {
               </label>
               <select
                 id="animal-species"
-                class="input-glass min-h-10 w-full py-2 text-sm"
+                class="input-glass min-h-10 w-full min-w-0 max-w-full py-2 text-sm"
                 [formField]="animalForm.speciesId"
               >
                 <option value="">{{ 'translate_animals-dialog-species-placeholder' | translate }}</option>
                 @for (s of speciesList(); track s.id) {
-                  <option [value]="s.id">{{ speciesDisplayName(s) }}</option>
+                  <option [value]="s.id">{{ s | speciesDisplayName : currentLang() }}</option>
                 }
               </select>
               @if (selectedSpecies()) {
@@ -110,7 +118,7 @@ interface AddAnimalModel {
               }
             </div>
 
-            <div class="space-y-1">
+            <div class="space-y-1 min-w-0">
               <label
                 for="animal-name"
                 class="block text-[11px] font-semibold text-slate-900 dark:text-slate-50"
@@ -120,13 +128,13 @@ interface AddAnimalModel {
               <input
                 id="animal-name"
                 type="text"
-                class="input-glass w-full text-xs"
+                class="input-glass w-full min-w-0 max-w-full text-xs"
                 [attr.placeholder]="'translate_animals-dialog-name-placeholder' | translate"
                 [formField]="animalForm.name"
               />
             </div>
 
-            <div class="space-y-1">
+            <div class="space-y-1 min-w-0">
               <label
                 for="animal-identifier"
                 class="block text-[11px] font-semibold text-slate-900 dark:text-slate-50"
@@ -136,13 +144,13 @@ interface AddAnimalModel {
               <input
                 id="animal-identifier"
                 type="text"
-                class="input-glass w-full text-xs"
+                class="input-glass w-full min-w-0 max-w-full text-xs"
                 [attr.placeholder]="'translate_animals-dialog-identifier-placeholder' | translate"
                 [formField]="animalForm.identifier"
               />
             </div>
 
-            <div class="space-y-1">
+            <div class="space-y-1 min-w-0">
               <label
                 for="animal-status"
                 class="block text-[11px] font-semibold text-slate-900 dark:text-slate-50"
@@ -152,7 +160,7 @@ interface AddAnimalModel {
               </label>
               <select
                 id="animal-status"
-                class="input-glass min-h-10 w-full py-2 text-sm"
+                class="input-glass min-h-10 w-full min-w-0 max-w-full py-2 text-sm"
                 [formField]="animalForm.status"
               >
                 <option value="">{{ 'translate_animals-dialog-status-placeholder' | translate }}</option>
@@ -167,11 +175,11 @@ interface AddAnimalModel {
               }
             </div>
 
-            <div class="space-y-2">
+            <div class="space-y-2 min-w-0">
               <span class="block text-[11px] font-semibold text-slate-900 dark:text-slate-50">
                 {{ 'translate_animals-age' | translate }} / {{ 'translate_animals-birth-date' | translate }}
               </span>
-              <div class="flex gap-2">
+              <div class="flex flex-wrap gap-2">
                 <button
                   type="button"
                   class="rounded-lg px-3 py-1.5 text-xs transition-colors"
@@ -192,17 +200,17 @@ interface AddAnimalModel {
                 </button>
               </div>
               @if (useAgeInput()) {
-                <div class="flex gap-2">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-stretch">
                   <input
                     type="number"
                     min="0"
-                    class="input-glass w-24 py-2 text-sm"
+                    class="input-glass w-full min-w-0 py-2 text-sm sm:w-24 sm:min-w-[6rem]"
                     [placeholder]="'translate_animals-age' | translate"
                     [value]="ageValue()"
                     (input)="ageValue.set($any($event.target).valueAsNumber || 0)"
                   />
                   <select
-                    class="input-glass min-h-10 flex-1 py-2 text-sm"
+                    class="input-glass min-h-10 w-full min-w-0 max-w-full py-2 text-sm sm:max-w-none"
                     [value]="ageUnit()"
                     (change)="ageUnit.set($any($event.target).value)"
                   >
@@ -215,7 +223,7 @@ interface AddAnimalModel {
                 <input
                   id="animal-birthDate"
                   type="date"
-                  class="input-glass w-full py-2 text-sm"
+                  class="input-glass w-full min-w-0 max-w-full py-2 text-sm"
                   [formField]="animalForm.birthDate"
                 />
                 @if (animalForm.birthDate().touched() && animalForm.birthDate().invalid()) {
@@ -226,19 +234,76 @@ interface AddAnimalModel {
               }
             </div>
 
-            <div class="space-y-1">
-              <label
-                for="animal-vaccinationDate"
-                class="block text-[11px] font-semibold text-slate-900 dark:text-slate-50"
+            <div class="space-y-2 min-w-0">
+              <span class="block text-[11px] font-semibold text-slate-900 dark:text-slate-50">
+                {{ 'translate_animals-dialog-vaccinations-label' | translate }}
+              </span>
+              @for (v of vaccinations(); track v.id) {
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 border-b border-slate-200/50 dark:border-white/10 pb-2">
+                  <input
+                    type="text"
+                    class="input-glass w-full min-w-0 max-w-full py-2 text-sm"
+                    [placeholder]="'translate_animals-vaccination-name' | translate"
+                    [value]="v.name"
+                    (input)="updateVaccinationName(v.id, $any($event.target).value)"
+                  />
+                  <input
+                    type="date"
+                    class="input-glass w-full min-w-0 max-w-full py-2 text-sm sm:w-36"
+                    [value]="v.date"
+                    (input)="updateVaccinationDate(v.id, $any($event.target).value)"
+                  />
+                  <button
+                    type="button"
+                    class="btn-ghost shrink-0 px-2 py-1 text-[11px] rounded-full"
+                    (click)="removeVaccination(v.id)"
+                    [attr.aria-label]="'translate_animals-dialog-remove-vaccination' | translate"
+                  >
+                    {{ 'translate_animals-dialog-remove-vaccination' | translate }}
+                  </button>
+                </div>
+              }
+              <button
+                type="button"
+                class="btn-ghost inline-flex items-center rounded-full px-2.5 py-1 text-[11px]"
+                (click)="addVaccination()"
               >
-                {{ 'translate_animals-vaccination-date' | translate }}
-              </label>
-              <input
-                id="animal-vaccinationDate"
-                type="date"
-                class="input-glass w-full text-xs"
-                [formField]="animalForm.vaccinationDate"
-              />
+                {{ 'translate_animals-dialog-add-vaccination' | translate }}
+              </button>
+            </div>
+
+            <div class="space-y-2 min-w-0">
+              <span class="block text-[11px] font-semibold text-slate-900 dark:text-slate-50">
+                {{ 'translate_animals-dialog-comments-section-label' | translate }}
+              </span>
+              @for (c of newComments(); track $index) {
+                <div class="flex gap-2">
+                  <textarea
+                    class="input-glass w-full min-w-0 max-w-full py-2 text-sm resize-y min-h-[4rem]"
+                    [placeholder]="'translate_animals-dialog-comment-placeholder' | translate"
+                    [value]="c"
+                    (input)="updateComment($index, $any($event.target).value)"
+                    rows="2"
+                  ></textarea>
+                  @if (newComments().length > 1) {
+                    <button
+                      type="button"
+                      class="btn-ghost shrink-0 px-2 py-1 text-[11px] rounded-full self-start"
+                      (click)="removeComment($index)"
+                      [attr.aria-label]="'translate_animals-dialog-remove-vaccination' | translate"
+                    >
+                      {{ 'translate_animals-dialog-remove-vaccination' | translate }}
+                    </button>
+                  }
+                </div>
+              }
+              <button
+                type="button"
+                class="btn-ghost inline-flex items-center rounded-full px-2.5 py-1 text-[11px]"
+                (click)="addComment()"
+              >
+                {{ 'translate_animals-dialog-add-comment-entry' | translate }}
+              </button>
             </div>
 
             @if (formError()) {
@@ -294,8 +359,16 @@ export class AddAnimalDialogComponent {
     vaccinationDate: '',
   });
 
+  /** Dynamic vaccination entries (name + date). */
+  protected readonly vaccinations = signal<VaccinationEntry[]>([]);
+  /** New comment texts to save (date/time and "by" set when saving). */
+  protected readonly newComments = signal<string[]>(['']);
+
   private readonly translation = inject(TranslationService);
   private readonly animalsService = inject(AnimalsService);
+  private readonly animalCommentsService = inject(AnimalCommentsService);
+
+  private nextVaccinationId = 0;
 
   protected readonly animalForm = form(this.model, (schemaPath) => {
     required(schemaPath.speciesId, {
@@ -321,6 +394,8 @@ export class AddAnimalDialogComponent {
     return this.speciesList().find((s) => s.id === id) ?? null;
   });
 
+  protected readonly currentLang = computed(() => this.translation.currentLang());
+
   constructor() {
     effect(() => {
       const a = this.animal();
@@ -335,6 +410,22 @@ export class AddAnimalDialogComponent {
           birthDate: a.birthDate ? this.formatDateForInput(a.birthDate) : '',
           vaccinationDate: a.vaccinationDate ? this.formatDateForInput(a.vaccinationDate) : '',
         });
+        const vacc = a.vaccinations?.length
+          ? a.vaccinations.map((v) => ({
+              id: `v-${this.nextVaccinationId++}`,
+              name: v.name,
+              date: this.formatDateForInput(v.date),
+            }))
+          : [];
+        if (vacc.length === 0 && a.vaccinationDate) {
+          vacc.push({
+            id: `v-${this.nextVaccinationId++}`,
+            name: '',
+            date: this.formatDateForInput(a.vaccinationDate),
+          });
+        }
+        this.vaccinations.set(vacc.length ? vacc : [{ id: `v-${this.nextVaccinationId++}`, name: '', date: '' }]);
+        this.newComments.set(['']);
       } else {
         this.editingId.set(null);
         this.useAgeInput.set(true);
@@ -348,12 +439,47 @@ export class AddAnimalDialogComponent {
           birthDate: '',
           vaccinationDate: '',
         });
+        this.vaccinations.set([{ id: `v-${this.nextVaccinationId++}`, name: '', date: '' }]);
+        this.newComments.set(['']);
       }
     });
   }
 
-  protected speciesDisplayName(s: Species): string {
-    return this.translation.currentLang() === 'ar' ? s.nameAr : s.nameEn;
+  protected addVaccination(): void {
+    this.vaccinations.update((list) => [
+      ...list,
+      { id: `v-${this.nextVaccinationId++}`, name: '', date: '' },
+    ]);
+  }
+
+  protected removeVaccination(id: string): void {
+    this.vaccinations.update((list) => list.filter((v) => v.id !== id));
+  }
+
+  protected updateVaccinationName(id: string, name: string): void {
+    this.vaccinations.update((list) =>
+      list.map((v) => (v.id === id ? { ...v, name } : v)),
+    );
+  }
+
+  protected updateVaccinationDate(id: string, date: string): void {
+    this.vaccinations.update((list) =>
+      list.map((v) => (v.id === id ? { ...v, date } : v)),
+    );
+  }
+
+  protected addComment(): void {
+    this.newComments.update((list) => [...list, '']);
+  }
+
+  protected removeComment(index: number): void {
+    this.newComments.update((list) => list.filter((_, i) => i !== index));
+  }
+
+  protected updateComment(index: number, value: string): void {
+    this.newComments.update((list) =>
+      list.map((c, i) => (i === index ? value : c)),
+    );
   }
 
   private formatDateForInput(d: Date): string {
@@ -409,8 +535,19 @@ export class AddAnimalDialogComponent {
         ? new Date(this.model().birthDate)
         : null;
     }
-    const vaccinationDate = this.model().vaccinationDate
-      ? new Date(this.model().vaccinationDate)
+    const vaccinationEntries = this.vaccinations().filter(
+      (v) => v.name.trim() || v.date,
+    );
+    const vaccinationsDto =
+      vaccinationEntries.length > 0
+        ? vaccinationEntries.map((v) => ({
+            name: v.name.trim() || '—',
+            date: v.date ? new Date(v.date) : new Date(),
+          }))
+        : undefined;
+    const lastVaccDate =
+      vaccinationsDto?.length ?
+        vaccinationsDto[vaccinationsDto.length - 1].date
       : null;
     if (birthDate && birthDate > new Date()) {
       this.formError.set(this.translation.instant('translate_animals-validation-birth-date-future'));
@@ -418,10 +555,14 @@ export class AddAnimalDialogComponent {
     }
 
     const editingId = this.editingId();
+    const commentsToAdd = this.newComments()
+      .map((t) => t.trim())
+      .filter(Boolean);
     await submit(this.animalForm, async () => {
       this.submitting.set(true);
       try {
         const { speciesId, name, identifier, status } = this.model();
+        let animalId: string;
         if (editingId) {
           await this.animalsService.update(editingId, {
             speciesId,
@@ -429,24 +570,32 @@ export class AddAnimalDialogComponent {
             identifier: identifier.trim() || null,
             status,
             birthDate,
-            vaccinationDate,
+            vaccinationDate: lastVaccDate,
+            vaccinations: vaccinationsDto,
           });
+          animalId = editingId;
         } else {
-          await this.animalsService.add({
+          const created = await this.animalsService.add({
             speciesId,
             name: name.trim() || null,
             identifier: identifier.trim() || null,
             status,
             birthDate,
-            vaccinationDate,
+            vaccinationDate: lastVaccDate,
+            vaccinations: vaccinationsDto,
+          });
+          animalId = created.id;
+        }
+        for (const text of commentsToAdd) {
+          await this.animalCommentsService.addComment(animalId, {
+            text,
+            type: 'general',
           });
         }
         this.saved.emit();
         this.closed.emit();
       } catch {
-        this.formError.set(
-          this.translation.instant(editingId ? 'translate_animals-error-update' : 'translate_animals-error-create'),
-        );
+        // Error already shown via NotificationService in AnimalsService / AnimalCommentsService
       } finally {
         this.submitting.set(false);
       }

@@ -2,6 +2,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
+  ElementRef,
+  inject,
   input,
   output,
   signal,
@@ -13,13 +16,21 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { UiButton } from '../button/ui-button.component';
+import { TableCellValuePipe } from './pipes/table-cell-value.pipe';
+import { TableRowIdPipe } from './pipes/table-row-id.pipe';
+import { TableActionIconPipe } from './pipes/table-action-icon.pipe';
 
 export type ColumnAlign = 'left' | 'center' | 'right';
 
+/** Built-in icon names rendered as inline SVG; any other string is used as CSS class for <i>. */
+export type TableActionIcon = 'view' | 'edit' | 'delete' | 'comment';
+
 export interface TableAction<T> {
   id: string;
-  labelKey: string;
+  labelKey?: string;
   variant?: 'primary' | 'ghost' | 'danger' | 'outline';
+  /** Icon: use 'view' | 'edit' | 'delete' for built-in SVG, or a CSS class string (e.g. 'pi pi-eye'). */
+  icon?: TableActionIcon | string;
   disabled?: (row: T) => boolean;
 }
 
@@ -61,7 +72,17 @@ export interface TableRowActionEvent<T> {
 @Component({
   selector: 'app-ui-data-table',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, TableModule, InputTextModule, TranslatePipe, UiButton],
+  imports: [
+    CommonModule,
+    FormsModule,
+    TableModule,
+    InputTextModule,
+    TranslatePipe,
+    UiButton,
+    TableCellValuePipe,
+    TableRowIdPipe,
+    TableActionIconPipe,
+  ],
   host: {
     class: 'block w-full',
   },
@@ -140,24 +161,28 @@ export interface TableRowActionEvent<T> {
             class="rounded-xl border border-slate-200/70 bg-white/70 p-4 shadow-sm backdrop-blur dark:border-white/10 dark:bg-slate-900/60"
           >
             <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-50 truncate">
-              {{ getPrimaryColumn() ? getCellValue(row, getPrimaryColumn()!) : '' }}
+              @if (primaryColumn(); as primary) {
+                {{ row | tableCellValue : primary }}
+              }
             </h3>
             <dl class="mt-3 space-y-1.5">
-              @for (col of getDataColumns(); track col.headerKey) {
+              @for (col of dataColumns(); track col.headerKey) {
                 <div class="flex flex-wrap items-baseline gap-x-2 text-xs">
                   <dt class="shrink-0 text-muted">{{ col.headerKey | translate }}</dt>
-                  <dd class="min-w-0 text-slate-900 dark:text-slate-50">{{ getCellValue(row, col) }}</dd>
+                  <dd class="min-w-0 text-slate-900 dark:text-slate-50">{{ row | tableCellValue : col }}</dd>
                 </div>
               }
             </dl>
-            @if (getActionColumns().length) {
+            @if (actionColumns().length) {
               <div class="mt-3 flex flex-wrap gap-2 border-t border-slate-200/50 pt-3 dark:border-white/10">
-                @for (col of getActionColumns(); track col.headerKey) {
+                @for (col of actionColumns(); track col.headerKey) {
                   @for (action of col.actions ?? []; track action.id) {
                     <app-ui-button
-                      size="sm"
+                      size="xs"
+                      class="min-w-[4.5rem]"
                       [variant]="action.variant ?? 'ghost'"
-                      [labelKey]="action.labelKey"
+                      [labelKey]="action?.labelKey ?? null"
+                      [icon]="action | tableActionIcon"
                       [disabled]="action.disabled ? action.disabled(row) : false"
                       (click)="onRowAction(action.id, row)"
                     />
@@ -182,8 +207,8 @@ export interface TableRowActionEvent<T> {
           <tr>
             @for (column of columns(); track column.headerKey) {
               <th
-                class="py-2 px-3 text-left text-[11px] uppercase tracking-wide text-muted"
-                [class.text-center]="column.align === 'center'"
+                class="py-2 px-3 text-center text-[11px] uppercase tracking-wide text-muted"
+                [class.text-left]="column.align === 'left'"
                 [class.text-right]="column.align === 'right'"
                 [class.w-32]="column.widthClass === 'w-32'"
                 [class.w-40]="column.widthClass === 'w-40'"
@@ -197,24 +222,46 @@ export interface TableRowActionEvent<T> {
           <tr class="border-b border-white/5 last:border-0">
             @for (column of columns(); track column.headerKey) {
               <td
-                class="py-2 px-3 text-xs text-slate-900 dark:text-slate-50"
-                [class.text-center]="column.align === 'center'"
+                class="py-2 px-3 text-xs text-center text-slate-900 dark:text-slate-50"
+                [class.text-left]="column.align === 'left'"
                 [class.text-right]="column.align === 'right'"
               >
                 @if (column.actions?.length) {
-                  <div class="inline-flex flex-wrap gap-1">
-                    @for (action of column.actions; track action.id) {
-                      <app-ui-button
-                        size="sm"
-                        [variant]="action.variant ?? 'ghost'"
-                        [labelKey]="action.labelKey"
-                        [disabled]="action.disabled ? action.disabled(row) : false"
-                        (click)="onRowAction(action.id, row)"
-                      />
+                  <div class="relative inline-block">
+                    <button
+                      type="button"
+                      class="btn-ghost inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] min-w-[4.5rem]"
+                      (click)="toggleActionMenu(row)"
+                      [attr.aria-expanded]="openMenuRowId() === (row | tableRowId : rowIdKey())"
+                      [attr.aria-haspopup]="'true'"
+                    >
+                      <span>{{ 'translate_table-actions-menu' | translate }}</span>
+                      <span class="text-[8px] opacity-70" aria-hidden="true">&#9660;</span>
+                    </button>
+                    @if (openMenuRowId() === (row | tableRowId : rowIdKey())) {
+                      <div
+                        class="menu-surface menu-surface-enter absolute right-0 z-20 mt-1 w-44 rounded-xl border border-slate-200/70 bg-white/90 py-1 text-xs shadow-lg backdrop-blur dark:border-white/10 dark:bg-slate-900/90 dark:text-slate-50"
+                        role="menu"
+                      >
+                        @for (action of column.actions; track action.id) {
+                          <button
+                            type="button"
+                            role="menuitem"
+                            class="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-white/10 disabled:opacity-50"
+                            [disabled]="action.disabled ? action.disabled(row) : false"
+                            (click)="onMenuAction(action.id, row)"
+                          >
+                            @if (action | tableActionIcon; as iconClass) {
+                              <i [class]="iconClass" aria-hidden="true"></i>
+                            }
+                            <span>{{ (action.labelKey ?? '') | translate }}</span>
+                          </button>
+                        }
+                      </div>
                     }
                   </div>
                 } @else {
-                  {{ getCellValue(row, column) }}
+                  {{ row | tableCellValue : column }}
                 }
               </td>
             }
@@ -240,24 +287,82 @@ export class UiDataTable<T extends object = Record<string, unknown>> {
   readonly filters = input<readonly FilterConfig<T>[]>([]);
   readonly loading = input(false);
   readonly emptyKey = input('translate_no-data');
+  /** Field name on the row object used as unique id for the actions menu. Default: 'id'. */
+  readonly rowIdKey = input<string>('id');
 
   readonly rowAction = output<TableRowActionEvent<T>>();
 
   protected readonly filterState = signal<Record<string, unknown>>({});
+  protected readonly openMenuRowId = signal<string | null>(null);
+  private readonly elementRef = inject(ElementRef<HTMLElement>);
+
+  constructor() {
+    effect(() => {
+      const openId = this.openMenuRowId();
+      if (openId === null) return;
+      const handler = (e: MouseEvent) => {
+        const el = this.elementRef.nativeElement;
+        if (el.contains(e.target as Node)) return;
+        this.openMenuRowId.set(null);
+      };
+      const t = setTimeout(() => document.addEventListener('click', handler, true), 0);
+      return () => {
+        clearTimeout(t);
+        document.removeEventListener('click', handler, true);
+      };
+    });
+  }
+
+  protected getRowId(row: T): string {
+    const key = this.rowIdKey();
+    const v = (row as Record<string, unknown>)[key];
+    return v !== undefined && v !== null ? String(v) : '';
+  }
+
+  protected isActionMenuOpen(row: T): boolean {
+    return this.openMenuRowId() === this.getRowId(row);
+  }
+
+  protected toggleActionMenu(row: T): void {
+    const id = this.getRowId(row);
+    this.openMenuRowId.update((current) => (current === id ? null : id));
+  }
+
+  protected onMenuAction(actionId: string, row: T): void {
+    this.openMenuRowId.set(null);
+    this.onRowAction(actionId, row);
+  }
 
   protected readonly filteredRows = computed<T[]>(() =>
     this.applyFilters(this.rows() ?? [], this.filters() ?? [], this.filterState()),
   );
 
-  protected hasActiveFilters(): boolean {
+  protected readonly hasActiveFilters = computed(() => {
     const current = this.filterState();
     return Object.values(current).some((value) => {
-      if (Array.isArray(value)) {
-        return value.length > 0;
-      }
+      if (Array.isArray(value)) return value.length > 0;
       return value !== undefined && value !== null && value !== '';
     });
-  }
+  });
+
+  protected readonly primaryColumn = computed(() => {
+    const cols = this.columns() ?? [];
+    const primary = cols.find((c) => c.primaryOnMobile && c.field);
+    return primary ?? cols.find((c) => c.field) ?? null;
+  });
+
+  protected readonly dataColumns = computed(() => {
+    const cols = this.columns() ?? [];
+    const primary = this.primaryColumn();
+    return cols.filter(
+      (c) => c.field && !(c.actions?.length && !c.field) && c !== primary,
+    );
+  });
+
+  protected readonly actionColumns = computed(() => {
+    const cols = this.columns() ?? [];
+    return cols.filter((c) => (c.actions?.length ?? 0) > 0);
+  });
 
   protected onFilterChange(id: string, value: unknown): void {
     this.filterState.update((current) => ({
@@ -272,39 +377,6 @@ export class UiDataTable<T extends object = Record<string, unknown>> {
 
   protected onRowAction(actionId: string, row: T): void {
     this.rowAction.emit({ actionId, row });
-  }
-
-  protected getCellValue(row: T, column: ColumnConfig<T>): unknown {
-    if (!column.field) {
-      return '';
-    }
-
-    return (row as Record<string, unknown>)[column.field as string];
-  }
-
-  /** Column used as card title on mobile: primaryOnMobile or first with field. */
-  protected getPrimaryColumn(): ColumnConfig<T> | null {
-    const cols = this.columns() ?? [];
-    const primary = cols.find((c) => c.primaryOnMobile && c.field);
-    if (primary) {
-      return primary;
-    }
-    return cols.find((c) => c.field) ?? null;
-  }
-
-  /** Columns that show as label/value on mobile (have field, no actions-only). */
-  protected getDataColumns(): ColumnConfig<T>[] {
-    const cols = this.columns() ?? [];
-    const primary = this.getPrimaryColumn();
-    return cols.filter(
-      (c) => c.field && !(c.actions?.length && !c.field) && c !== primary,
-    );
-  }
-
-  /** Columns that only have actions (shown as buttons on mobile). */
-  protected getActionColumns(): ColumnConfig<T>[] {
-    const cols = this.columns() ?? [];
-    return cols.filter((c) => (c.actions?.length ?? 0) > 0);
   }
 
   private applyFilters(

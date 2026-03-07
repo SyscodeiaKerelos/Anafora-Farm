@@ -258,9 +258,7 @@ export class AddUserDialogComponent {
         this.resetForm();
       } catch (err) {
         console.error('Create user failed:', err);
-        this.formError.set(
-          this.translation.instant('translate_admin-users-error-create'),
-        );
+        // Error already shown via NotificationService in UserDirectoryService
       } finally {
         this.submitting.set(false);
       }
