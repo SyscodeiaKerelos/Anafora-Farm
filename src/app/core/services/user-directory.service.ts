@@ -1,40 +1,29 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { httpsCallable } from 'firebase/functions';
-import { collection, getDocs } from 'firebase/firestore';
+import {
+  Firestore,
+  collection,
+  doc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  serverTimestamp,
+} from '@angular/fire/firestore'; // ✅ ONLY from @angular/fire
 
-import { getFirebaseDb, getFirebaseFunctions } from '../config/firebase.config';
 import { AdminUser } from '../types/admin-user';
 import { Role } from '../types/role';
 import { TranslationService } from './translation.service';
 
-interface CreateUserDto {
+export interface CreateUserDto {
   email: string;
   password?: string;
   displayName?: string;
   role: Role;
 }
 
-interface CreateUserWithRoleResponse {
-  uid: string;
-  email: string;
-  displayName: string | null;
-  role: Role;
-}
-
-interface UpdateUserRoleRequest {
-  uid: string;
-  role: Role;
-}
-
-interface DeactivateUserRequest {
-  uid: string;
-  reason?: string;
-}
-
 @Injectable()
 export class UserDirectoryService {
-  private readonly db = getFirebaseDb();
-  private readonly functions = getFirebaseFunctions();
+  // ✅ Inject via Angular DI — never call getFirebaseDb() manually
+  private readonly firestore = inject(Firestore);
   private readonly translation = inject(TranslationService);
 
   private readonly _loading = signal(false);
@@ -48,7 +37,7 @@ export class UserDirectoryService {
     this._error.set(null);
 
     try {
-      const snapshot = await getDocs(collection(this.db, 'users'));
+      const snapshot = await getDocs(collection(this.firestore, 'users'));
       const users: AdminUser[] = [];
 
       snapshot.forEach((docSnapshot) => {
@@ -57,7 +46,6 @@ export class UserDirectoryService {
           displayName?: string | null;
           role?: Role;
         };
-
         users.push({
           id: docSnapshot.id,
           email: data.email ?? null,
@@ -68,61 +56,64 @@ export class UserDirectoryService {
 
       return users;
     } catch {
-      this._error.set(this.translation.instant('translate_admin-users-error-load'));
-      throw this._error();
+      const msg = this.translation.instant('translate_admin-users-error-load');
+      this._error.set(msg);
+      throw msg;
     } finally {
       this._loading.set(false);
     }
   }
 
   async createUser(input: CreateUserDto): Promise<AdminUser> {
-    const callable = httpsCallable<CreateUserDto, CreateUserWithRoleResponse>(
-      this.functions,
-      'createUserWithRole',
-    );
-
     try {
-      const result = await callable(input);
-      const data = result.data;
+      const usersRef = collection(this.firestore, 'users');
+      const ref = await addDoc(usersRef, {
+        email: input.email.trim().toLowerCase(),
+        displayName: input.displayName?.trim() ?? null,
+        role: input.role,
+        isActive: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
 
       return {
-        id: data.uid,
-        email: data.email,
-        displayName: data.displayName,
-        role: data.role,
+        id: ref.id,
+        email: input.email.trim().toLowerCase(),
+        displayName: input.displayName?.trim() ?? null,
+        role: input.role,
       };
-    } catch {
-      this._error.set(this.translation.instant('translate_admin-users-error-update'));
-      throw this._error();
+    } catch (err) {
+      const msg = this.translation.instant('translate_admin-users-error-create');
+      this._error.set(msg);
+      throw err;
     }
   }
 
   async updateRole(uid: string, role: Role): Promise<void> {
-    const callable = httpsCallable<UpdateUserRoleRequest, void>(
-      this.functions,
-      'updateUserRole',
-    );
-
     try {
-      await callable({ uid, role });
+      await updateDoc(doc(this.firestore, 'users', uid), {
+        role,
+        updatedAt: serverTimestamp(),
+      });
     } catch {
-      this._error.set(this.translation.instant('translate_admin-users-error-update'));
-      throw this._error();
+      const msg = this.translation.instant('translate_admin-users-error-update');
+      this._error.set(msg);
+      throw msg;
     }
   }
 
   async deactivateUser(uid: string, reason?: string): Promise<void> {
-    const callable = httpsCallable<DeactivateUserRequest, void>(
-      this.functions,
-      'deactivateUser',
-    );
-
     try {
-      await callable({ uid, reason });
+      await updateDoc(doc(this.firestore, 'users', uid), {
+        isActive: false,
+        disabledAt: serverTimestamp(),
+        disabledReason: reason ?? null,
+        updatedAt: serverTimestamp(),
+      });
     } catch {
-      this._error.set(this.translation.instant('translate_admin-users-error-update'));
-      throw this._error();
+      const msg = this.translation.instant('translate_admin-users-error-update');
+      this._error.set(msg);
+      throw msg;
     }
   }
 }
-

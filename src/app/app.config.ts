@@ -2,24 +2,35 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { providePrimeNG } from 'primeng/config';
-import { TranslateService, TranslateLoader, provideTranslateService } from '@ngx-translate/core';
+import { TranslateLoader, provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader, TranslateHttpLoader } from '@ngx-translate/http-loader';
 import Aura from '@primeuix/themes/aura';
+import { provideIcons } from '@ng-icons/core';
+import { provideFirebaseApp, FirebaseApp } from '@angular/fire/app';
+import { provideFirestore, getFirestore } from '@angular/fire/firestore';
 
 import { routes } from './app.routes';
+import { APP_ICONS } from './core/icons';
+import { initializeApp } from '@angular/fire/app';
 import { TranslationService } from './core/services/translation.service';
 import { AuthService } from './core/services/auth.service';
 import { UserDirectoryService } from './core/services/user-directory.service';
+import { environment } from '../environments/environment';
 
 export function createTranslateLoader() {
   return new TranslateHttpLoader();
 }
 
+export function initializeFirebase() {
+  return initializeApp(environment.firebase);
+}
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
     provideHttpClient(),
+    provideFirebaseApp(() => initializeFirebase()),
+    provideFirestore((injector) => getFirestore(injector.get(FirebaseApp))),
     {
       provide: TranslateLoader,
       useFactory: createTranslateLoader,
@@ -29,9 +40,7 @@ export const appConfig: ApplicationConfig = {
         prefix: '/assets/i18n/',
         suffix: '.json'
       }),
-
-      defaultLanguage: 'en',
-      useDefaultLang: true,
+      fallbackLang: 'en',
     }),
     providePrimeNG({
       theme: {
@@ -42,6 +51,7 @@ export const appConfig: ApplicationConfig = {
         },
       },
     }),
+    provideIcons(APP_ICONS),
     TranslationService,
     AuthService,
     UserDirectoryService,

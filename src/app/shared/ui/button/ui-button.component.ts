@@ -21,7 +21,7 @@ type IconPosition = 'left' | 'right';
     <button
       [attr.type]="type()"
       [disabled]="disabled() || loading()"
-      class="inline-flex items-center gap-2 rounded-full px-4 py-1.5"
+      class="inline-flex items-center gap-2 rounded-full"
       [class.px-3]="size() === 'sm'"
       [class.py-1]="size() === 'sm'"
     >

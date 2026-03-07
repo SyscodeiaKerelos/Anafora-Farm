@@ -2,9 +2,9 @@ import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
-import { getFunctions, type Functions } from 'firebase/functions';
 
-const firebaseConfig = {
+/** Exported for use with AngularFire provideFirebaseApp. */
+export const firebaseConfig = {
   apiKey: 'AIzaSyAlhwH-MLO7tdfD-BJqtKlPMVP43ZYXa4E',
   authDomain: 'anafora-farm.firebaseapp.com',
   projectId: 'anafora-farm',
@@ -17,7 +17,6 @@ let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 let storage: FirebaseStorage;
-let functionsInstance: Functions;
 
 export function initializeFirebase(): FirebaseApp {
   if (!app) {
@@ -55,11 +54,4 @@ export function getFirebaseStorage(): FirebaseStorage {
     storage = getStorage(getFirebaseApp());
   }
   return storage;
-}
-
-export function getFirebaseFunctions(): Functions {
-  if (!functionsInstance) {
-    functionsInstance = getFunctions(getFirebaseApp());
-  }
-  return functionsInstance;
 }

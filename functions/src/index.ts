@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
-import * as functions from 'firebase-functions/v1';
+import * as functionsV1 from 'firebase-functions/v1';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import type {
   CreateUserWithRoleRequest,
   CreateUserWithRoleResponse,
@@ -16,32 +17,35 @@ admin.initializeApp();
 const auth = admin.auth();
 const db = admin.firestore();
 
-function assertIsSuperAdmin(context: functions.https.CallableContext): void {
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Authentication required.');
+/** CORS: allow all origins. Callable functions are protected by auth (assertIsSuperAdmin). */
+function assertIsSuperAdmin(requestAuth: { uid: string; token?: Record<string, unknown> } | undefined): void {
+  if (!requestAuth) {
+    throw new HttpsError('unauthenticated', 'Authentication required.');
   }
 
-  const role = context.auth.token.role as Role | undefined;
+  const role = requestAuth.token?.role as Role | undefined;
   if (role !== 'superAdmin') {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       'permission-denied',
       'Only super administrators can perform this action.',
     );
   }
 }
 
-export const createUserWithRole = functions.https.onCall(
-  async (data: CreateUserWithRoleRequest, context): Promise<CreateUserWithRoleResponse> => {
-    assertIsSuperAdmin(context);
+export const createUserWithRole = onCall(
+  { cors: true },
+  async (request): Promise<CreateUserWithRoleResponse> => {
+    assertIsSuperAdmin(request.auth);
 
+    const data = request.data as CreateUserWithRoleRequest;
     const { email, password, displayName, role } = data;
 
     if (!email || typeof email !== 'string') {
-      throw new functions.https.HttpsError('invalid-argument', 'A valid email is required.');
+      throw new HttpsError('invalid-argument', 'A valid email is required.');
     }
 
     if (!isValidRole(role)) {
-      throw new functions.https.HttpsError('invalid-argument', 'Invalid role.');
+      throw new HttpsError('invalid-argument', 'Invalid role.');
     }
 
     const trimmedEmail = email.trim().toLowerCase();
@@ -66,7 +70,7 @@ export const createUserWithRole = functions.https.onCall(
         role,
         isActive: true,
         createdAt,
-        createdBy: context.auth?.uid ?? null,
+        createdBy: request.auth?.uid ?? null,
         updatedAt: createdAt,
       });
 
@@ -80,21 +84,22 @@ export const createUserWithRole = functions.https.onCall(
   },
 );
 
-export const updateUserRole = functions.https.onCall(
-  async (data: UpdateUserRoleRequest, context): Promise<UpdateUserRoleResponse> => {
-    assertIsSuperAdmin(context);
+export const updateUserRole = onCall(
+  { cors: true },
+  async (request): Promise<UpdateUserRoleResponse> => {
+    assertIsSuperAdmin(request.auth);
 
+    const data = request.data as UpdateUserRoleRequest;
     const { uid, role } = data;
 
     if (!uid || typeof uid !== 'string') {
-      throw new functions.https.HttpsError('invalid-argument', 'A valid uid is required.');
+      throw new HttpsError('invalid-argument', 'A valid uid is required.');
     }
 
     if (!isValidRole(role)) {
-      throw new functions.https.HttpsError('invalid-argument', 'Invalid role.');
+      throw new HttpsError('invalid-argument', 'Invalid role.');
     }
 
-    // Optional: prevent removing the last superAdmin
     if (role !== 'superAdmin') {
       const superAdmins = await auth.listUsers();
       const superAdminCount = superAdmins.users.filter(
@@ -105,7 +110,7 @@ export const updateUserRole = functions.https.onCall(
         const target = await auth.getUser(uid);
         const targetRole = target.customClaims?.role as Role | undefined;
         if (targetRole === 'superAdmin') {
-          throw new functions.https.HttpsError(
+          throw new HttpsError(
             'failed-precondition',
             'Cannot demote the last super administrator.',
           );
@@ -126,14 +131,16 @@ export const updateUserRole = functions.https.onCall(
   },
 );
 
-export const deactivateUser = functions.https.onCall(
-  async (data: DeactivateUserRequest, context): Promise<DeactivateUserResponse> => {
-    assertIsSuperAdmin(context);
+export const deactivateUser = onCall(
+  { cors: true },
+  async (request): Promise<DeactivateUserResponse> => {
+    assertIsSuperAdmin(request.auth);
 
+    const data = request.data as DeactivateUserRequest;
     const { uid, reason } = data;
 
     if (!uid || typeof uid !== 'string') {
-      throw new functions.https.HttpsError('invalid-argument', 'A valid uid is required.');
+      throw new HttpsError('invalid-argument', 'A valid uid is required.');
     }
 
     await auth.updateUser(uid, { disabled: true });
@@ -147,7 +154,7 @@ export const deactivateUser = functions.https.onCall(
         {
           isActive: false,
           disabledAt,
-          disabledBy: context.auth?.uid ?? null,
+          disabledBy: request.auth?.uid ?? null,
           disabledReason: reason ?? null,
           updatedAt: disabledAt,
         },
@@ -158,7 +165,7 @@ export const deactivateUser = functions.https.onCall(
   },
 );
 
-export const syncUserClaimsOnProfileChange = functions.firestore
+export const syncUserClaimsOnProfileChange = functionsV1.firestore
   .document('users/{uid}')
   .onWrite(async (change, context) => {
     const before = change.before.data() as { role?: Role } | undefined;

@@ -2,13 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 
-import {
-  collection,
-  doc,
-  getDocs,
-  updateDoc,
-} from 'firebase/firestore';
-
 import { AuthService } from '../../core/services/auth.service';
 import { Role } from '../../core/types/role';
 import { TranslationService } from '../../core/services/translation.service';
@@ -20,16 +13,17 @@ import {
   type FilterConfig,
   type TableRowActionEvent,
 } from '../../shared/ui/table/ui-data-table.component';
+import { AddUserDialogComponent } from './add-user-dialog.component';
 
 @Component({
   selector: 'app-admin-users-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, TranslatePipe, UiDataTable],
+  imports: [CommonModule, TranslatePipe, UiDataTable, AddUserDialogComponent],
   host: {
     class: 'block space-y-6',
   },
   template: `
-    @if (!canManage()) {
+    @if (canManage()) {
       <section class="card-glass p-6 text-center">
         <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-50">
           {{ 'translate_admin-restricted-title' | translate }}
@@ -49,13 +43,22 @@ import {
               {{ 'translate_admin-users-subtitle' | translate }}
             </p>
           </div>
-          <button
-            type="button"
-            class="btn-ghost px-4 py-1.5 text-xs"
-            (click)="reload()"
-          >
-            {{ 'translate_admin-users-refresh' | translate }}
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="btn-primary"
+              (click)="openAddUserDialog()"
+            >
+              {{ 'translate_admin-users-add-user' | translate }}
+            </button>
+            <button
+              type="button"
+              class="btn-ghost"
+              (click)="reload()"
+            >
+              {{ 'translate_admin-users-refresh' | translate }}
+            </button>
+          </div>
         </header>
 
         @if (error()) {
@@ -79,6 +82,12 @@ import {
         </p>
       </section>
     }
+
+    <app-add-user-dialog
+      [open]="addUserDialogOpen() === true"
+      (created)="onUserCreated($event)"
+      (closed)="closeAddUserDialog()"
+    />
   `,
 })
 export class AdminUsersPage {
@@ -92,6 +101,7 @@ export class AdminUsersPage {
   protected readonly error = signal<string | null>(null);
 
   protected readonly canManage = computed(() => this.authService.hasAtLeastRole('superAdmin'));
+  protected readonly addUserDialogOpen = signal(false);
 
   protected readonly columns: ColumnConfig<AdminUser>[] = [
     {
@@ -156,6 +166,20 @@ export class AdminUsersPage {
 
   constructor() {
     void this.reload();
+  }
+
+  protected openAddUserDialog(): void {
+    this.addUserDialogOpen.set(true);
+  }
+
+  protected closeAddUserDialog(): void {
+    this.addUserDialogOpen.set(false);
+    this.error.set(null);
+  }
+
+  protected onUserCreated(user: AdminUser): void {
+    this.users.update((current) => [...current, user]);
+    this.closeAddUserDialog();
   }
 
   onRowAction(event: TableRowActionEvent<AdminUser>): void {

@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
+import { NgIcon } from '@ng-icons/core';
 
 import { NavbarDropdownController } from '../../../core/layout/navbar-dropdown.controller';
 
@@ -23,7 +24,7 @@ export interface UiMenuItem {
 @Component({
   selector: 'app-ui-menu',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, NgIcon],
   host: {
     class: 'relative inline-block text-left',
   },
@@ -41,19 +42,17 @@ export interface UiMenuItem {
           {{ avatarText() }}
         </span>
       } @else if (icon()) {
-        <i [class]="icon()" aria-hidden="true"></i>
+        <ng-icon [name]="icon()!" size="1rem" />
       }
 
       @if (labelKey()) {
         <span>{{ labelKey() | translate }}</span>
       }
 
-      <i
-        class="pi"
-        [class.pi-chevron-down]="!open()"
-        [class.pi-chevron-up]="open()"
-        aria-hidden="true"
-      ></i>
+      <ng-icon
+        [name]="open() ? 'faSolidChevronUp' : 'faSolidChevronDown'"
+        size="0.75rem"
+      />
     </button>
 
     @if (open()) {
@@ -67,7 +66,7 @@ export interface UiMenuItem {
             (click)="onSelect(item.id)"
           >
             @if (item.icon) {
-              <i [class]="item.icon" aria-hidden="true"></i>
+              <ng-icon [name]="item.icon" size="1rem" />
             }
             <span>{{ item.labelKey | translate }}</span>
           </button>

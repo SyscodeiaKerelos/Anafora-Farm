@@ -19,7 +19,13 @@ export const routes: Routes = [
   {
     path: 'admin/users',
     component: AdminUsersPage,
-    canActivate: [roleGuard('superAdmin')],
+    // canActivate: [roleGuard('admin')],
+  },
+  {
+    path: 'animals',
+    loadChildren: () =>
+      import('./features/animals/animals.routes').then((m) => m.ANIMALS_ROUTES),
+    // canActivate: [authGuard],
   },
   {
     path: '**',
