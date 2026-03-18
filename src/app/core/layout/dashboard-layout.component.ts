@@ -38,16 +38,16 @@ interface NavItem {
       class="fixed inset-x-0 top-0 z-40 border-b border-slate-200/70 bg-white/95 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/95 md:hidden"
     >
       <div class="mx-2 flex h-14 items-center justify-between px-3">
-        <div class="flex items-center gap-2">
-          <div
-            class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600"
-          >
-            <ng-icon name="faSolidTractor" size="1.125rem" class="text-white" />
-          </div>
+        <a routerLink="/" class="flex items-center gap-2">
+          <img
+            src="assets/logo anafora black icon pdf-01.svg"
+            alt="Anafora"
+            class="h-8 w-8 object-contain dark:invert"
+          />
           <span class="text-base font-bold tracking-wide text-slate-900 dark:text-white">
-            {{ 'Anafora' }}
+            Anafora
           </span>
-        </div>
+        </a>
         <div class="flex items-center gap-1">
           <button
             type="button"
@@ -81,21 +81,22 @@ interface NavItem {
       class="fixed inset-y-0 start-0 z-30 hidden w-64 flex-col border-e border-slate-200/70 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/80 md:flex"
     >
       <!-- Logo -->
-      <div
-        class="flex h-16 items-center gap-3 border-b border-slate-200/70 px-5 dark:border-white/10"
+      <a
+        routerLink="/"
+        class="flex h-16 items-center gap-3 border-b border-slate-200/70 px-5 dark:border-white/10 hover:opacity-80 transition-opacity"
       >
-        <div
-          class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600"
-        >
-          <ng-icon name="faSolidTractor" size="1.25rem" class="text-white" />
-        </div>
+        <img
+          src="assets/logo anafora black icon pdf-01.svg"
+          alt="Anafora"
+          class="h-10 w-10 object-contain dark:invert"
+        />
         <div>
           <span class="text-sm font-bold tracking-wide text-slate-900 dark:text-white"
             >Anafora</span
           >
           <span class="ms-1 text-xs text-muted">Farm</span>
         </div>
-      </div>
+      </a>
 
       <!-- Nav Items -->
       <nav class="flex-1 overflow-y-auto p-4">

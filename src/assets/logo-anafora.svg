@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" fill="none">
+  <!-- Background (optional, remove for transparent) -->
+  <!-- <rect width="200" height="60" rx="8" fill="#F59E0B"/> -->
+  
+  <!-- Tractor Icon -->
+  <g transform="translate(10, 8)">
+    <!-- Tractor body -->
+    <rect x="0" y="12" width="24" height="18" rx="2" fill="#F59E0B"/>
+    <!-- Tractor cabin -->
+    <rect x="16" y="4" width="12" height="12" rx="2" fill="#D97706"/>
+    <!-- Cabin window -->
+    <rect x="18" y="6" width="8" height="8" rx="1" fill="#FEF3C7"/>
+    <!-- Front wheel -->
+    <circle cx="6" cy="34" r="6" fill="#374151"/>
+    <circle cx="6" cy="34" r="3" fill="#9CA3AF"/>
+    <!-- Back wheel -->
+    <circle cx="22" cy="34" r="8" fill="#374151"/>
+    <circle cx="22" cy="34" r="4" fill="#9CA3AF"/>
+    <!-- Exhaust -->
+    <rect x="4" y="2" width="2" height="6" rx="1" fill="#6B7280"/>
+    <!-- Smoke -->
+    <circle cx="5" cy="0" r="2" fill="#9CA3AF" opacity="0.6"/>
+    <circle cx="8" cy="-2" r="1.5" fill="#9CA3AF" opacity="0.4"/>
+  </g>
+  
+  <!-- Text -->
+  <text x="52" y="28" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#F59E0B">Anafora</text>
+  <text x="52" y="44" font-family="Arial, sans-serif" font-size="12" fill="#6B7280">FARM</text>
+  
+  <!-- Decorative leaf -->
+  <path d="M175 35 Q180 25 185 35 Q180 40 175 35" fill="#10B981" opacity="0.8"/>
+  <path d="M180 38 Q185 28 190 38 Q185 43 180 38" fill="#10B981" opacity="0.6"/>
+</svg>
