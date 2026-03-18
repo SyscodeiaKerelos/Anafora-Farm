@@ -32,10 +32,10 @@
   },
   "devDependencies": {
     "@angular/build": "^21.2.0",
-    "firebase-tools": "^13.0.0",
     "@angular/cli": "^21.2.0",
     "@angular/compiler-cli": "^21.2.0",
     "@tailwindcss/postcss": "^4.1.12",
+    "firebase-tools": "^13.0.0",
     "jsdom": "^28.0.0",
     "postcss": "^8.5.3",
     "prettier": "^3.8.1",

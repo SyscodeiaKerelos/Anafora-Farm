@@ -17,10 +17,7 @@ import {
   type TableRowActionEvent,
 } from '../../shared/ui/table/ui-data-table.component';
 import { UiConfirmDialog } from '../../shared/ui/dialog/ui-confirm-dialog.component';
-import {
-  AddAnimalDialogComponent,
-  SpeciesSectionComponent,
-} from './components.index';
+import { AddAnimalDialogComponent, SpeciesSectionComponent } from './components.index';
 
 const STATUS_KEYS: Record<AnimalStatus, string> = {
   newborn: 'translate_animals-status-newborn',
@@ -38,6 +35,8 @@ interface AnimalRow extends AnimalWithSpecies {
   vaccinationDateDisplay: string;
   ageDisplay: string | null;
   statusDisplay: string;
+  eggLayingDateDisplay: string;
+  hatchingDateDisplay: string;
 }
 
 @Component({
@@ -108,10 +107,7 @@ interface AnimalRow extends AnimalWithSpecies {
       }
     </section>
 
-    <app-species-section
-      [species]="speciesList()"
-      [loading]="speciesLoading()"
-    />
+    <app-species-section [species]="speciesList()" [loading]="speciesLoading()" />
 
     <app-add-animal-dialog
       [open]="addDialogOpen()"
@@ -151,6 +147,11 @@ export class AnimalsPage {
   });
 
   private readonly allColumns: ColumnConfig<AnimalRow>[] = [
+    {
+      headerKey: 'translate_animals-number',
+      field: 'number',
+      widthClass: 'w-28',
+    },
     {
       headerKey: 'translate_name',
       field: 'displayName',
@@ -193,7 +194,12 @@ export class AnimalsPage {
         { id: 'view', labelKey: 'translate_animals-view-details', variant: 'ghost', icon: 'view' },
         { id: 'edit', labelKey: 'translate_animals-edit', variant: 'ghost', icon: 'edit' },
         { id: 'delete', labelKey: 'translate_animals-delete', variant: 'ghost', icon: 'delete' },
-        { id: 'comment', labelKey: 'translate_animals-add-comment', variant: 'ghost', icon: 'comment' },
+        {
+          id: 'comment',
+          labelKey: 'translate_animals-add-comment',
+          variant: 'ghost',
+          icon: 'comment',
+        },
       ],
     },
   ];
@@ -203,6 +209,8 @@ export class AnimalsPage {
     'birthDateDisplay',
     'vaccinationDateDisplay',
     'ageDisplay',
+    'eggLayingDateDisplay',
+    'hatchingDateDisplay',
   ];
 
   protected readonly columns = computed<ColumnConfig<AnimalRow>[]>(() => {
@@ -226,39 +234,39 @@ export class AnimalsPage {
   protected readonly filters = computed<FilterConfig<AnimalRow>[]>(() => {
     const lang = this.translation.currentLang();
     return [
-    {
-      id: 'search',
-      labelKey: 'translate_animals-filter-search-label',
-      placeholderKey: 'translate_animals-filter-search-placeholder',
-      type: 'text',
-      fields: ['displayName', 'identifier', 'speciesName'],
-    },
-    {
-      id: 'species',
-      labelKey: 'translate_animals-filter-species-label',
-      placeholderKey: 'translate_animals-filter-species-placeholder',
-      type: 'select',
-      fields: ['speciesId'],
-      options: this.speciesList().map((s) => ({
-        labelKey: lang === 'ar' ? s.nameAr : s.nameEn,
-        value: s.id,
-      })),
-    },
-    {
-      id: 'status',
-      labelKey: 'translate_animals-filter-status-label',
-      placeholderKey: 'translate_animals-filter-status-placeholder',
-      type: 'select',
-      fields: ['status'],
-      options: [
-        { labelKey: 'translate_animals-status-newborn', value: 'newborn' },
-        { labelKey: 'translate_animals-status-gives-egg', value: 'gives_egg' },
-        { labelKey: 'translate_animals-status-alive', value: 'alive' },
-        { labelKey: 'translate_animals-status-died', value: 'died' },
-        { labelKey: 'translate_animals-status-sick', value: 'sick' },
-      ],
-    },
-  ];
+      {
+        id: 'search',
+        labelKey: 'translate_animals-filter-search-label',
+        placeholderKey: 'translate_animals-filter-search-placeholder',
+        type: 'text',
+        fields: ['number', 'displayName', 'identifier', 'speciesName'],
+      },
+      {
+        id: 'species',
+        labelKey: 'translate_animals-filter-species-label',
+        placeholderKey: 'translate_animals-filter-species-placeholder',
+        type: 'select',
+        fields: ['speciesId'],
+        options: this.speciesList().map((s) => ({
+          labelKey: lang === 'ar' ? s.nameAr : s.nameEn,
+          value: s.id,
+        })),
+      },
+      {
+        id: 'status',
+        labelKey: 'translate_animals-filter-status-label',
+        placeholderKey: 'translate_animals-filter-status-placeholder',
+        type: 'select',
+        fields: ['status'],
+        options: [
+          { labelKey: 'translate_animals-status-newborn', value: 'newborn' },
+          { labelKey: 'translate_animals-status-gives-egg', value: 'gives_egg' },
+          { labelKey: 'translate_animals-status-alive', value: 'alive' },
+          { labelKey: 'translate_animals-status-died', value: 'died' },
+          { labelKey: 'translate_animals-status-sick', value: 'sick' },
+        ],
+      },
+    ];
   });
 
   constructor() {
@@ -268,17 +276,14 @@ export class AnimalsPage {
 
   private toRow(a: AnimalWithSpecies): AnimalRow {
     const lang = this.translation.currentLang();
-    const displayName =
-      a.name?.trim() || a.identifier?.trim() || a.id || '—';
+    const displayName = a.name?.trim() || a.identifier?.trim() || a.id || '—';
     const speciesName = lang === 'ar' ? a.speciesNameAr : a.speciesNameEn;
-    const birthDateDisplay = a.birthDate
-      ? a.birthDate.toLocaleDateString()
-      : '';
-    const vaccinationDateDisplay = a.vaccinationDate
-      ? a.vaccinationDate.toLocaleDateString()
-      : '';
+    const birthDateDisplay = a.birthDate ? a.birthDate.toLocaleDateString() : '';
+    const vaccinationDateDisplay = a.vaccinationDate ? a.vaccinationDate.toLocaleDateString() : '';
     const ageDisplay = getAgeFromBirthDate(a.birthDate);
     const statusDisplay = this.translation.instant(STATUS_KEYS[a.status] ?? a.status);
+    const eggLayingDateDisplay = a.eggLayingDate ? a.eggLayingDate.toLocaleDateString() : '';
+    const hatchingDateDisplay = a.hatchingDate ? a.hatchingDate.toLocaleDateString() : '';
     return {
       ...a,
       displayName,
@@ -287,6 +292,8 @@ export class AnimalsPage {
       vaccinationDateDisplay,
       ageDisplay,
       statusDisplay,
+      eggLayingDateDisplay,
+      hatchingDateDisplay,
     };
   }
 
@@ -324,12 +331,15 @@ export class AnimalsPage {
       this.cancelDelete();
       return;
     }
-    this.animalsService.delete(row.id).then(() => {
-      this.cancelDelete();
-      void this.reload();
-    }).catch(() => {
-      this.cancelDelete();
-    });
+    this.animalsService
+      .delete(row.id)
+      .then(() => {
+        this.cancelDelete();
+        void this.reload();
+      })
+      .catch(() => {
+        this.cancelDelete();
+      });
   }
 
   protected cancelDelete(): void {

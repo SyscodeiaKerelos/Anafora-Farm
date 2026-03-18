@@ -28,6 +28,11 @@ export const routes: Routes = [
     // canActivate: [authGuard],
   },
   {
+    path: 'species',
+    loadChildren: () =>
+      import('./features/species/species.routes').then((m) => m.SPECIES_ROUTES),
+  },
+  {
     path: '**',
     redirectTo: '',
   },

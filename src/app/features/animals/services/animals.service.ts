@@ -16,27 +16,33 @@ import {
 
 import { Animal, AnimalWithSpecies, type AnimalVaccination } from '../../../core/types/animal';
 import type { AnimalStatus } from '../../../core/types/animal-status';
-import type { ReproductionType } from '../../../core/types/species';
+import type { ReproductionType, SpeciesType } from '../../../core/types/species';
 import { AuthService } from '../../../core/services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { TranslationService } from '../../../core/services/translation.service';
 
 export interface CreateAnimalDto {
+  number: string;
   speciesId: string;
   name: string | null;
   identifier: string | null;
   status: AnimalStatus;
   birthDate: Date | null;
+  eggLayingDate: Date | null;
+  hatchingDate: Date | null;
   vaccinationDate: Date | null;
   vaccinations?: AnimalVaccination[];
 }
 
 export interface UpdateAnimalDto {
+  number?: string;
   speciesId?: string;
   name?: string | null;
   identifier?: string | null;
   status?: AnimalStatus;
   birthDate?: Date | null;
+  eggLayingDate?: Date | null;
+  hatchingDate?: Date | null;
   vaccinationDate?: Date | null;
   vaccinations?: AnimalVaccination[];
 }
@@ -45,6 +51,7 @@ interface SpeciesInfo {
   nameEn: string;
   nameAr: string;
   reproductionType: ReproductionType;
+  type: SpeciesType;
 }
 
 @Injectable()
@@ -102,12 +109,15 @@ export class AnimalsService {
           nameEn?: string;
           nameAr?: string;
           reproductionType?: ReproductionType;
+          type?: SpeciesType;
         };
         const fallback = data.name ?? '';
         speciesMap.set(s.id, {
           nameEn: data.nameEn ?? fallback,
           nameAr: data.nameAr ?? fallback,
           reproductionType: (data.reproductionType ?? 'gives_birth') as ReproductionType,
+          type: (data.type ??
+            (data.reproductionType === 'lays_egg' ? 'bird' : 'animal')) as SpeciesType,
         });
       });
 
@@ -129,17 +139,23 @@ export class AnimalsService {
           nameEn: '',
           nameAr: '',
           reproductionType: 'gives_birth' as ReproductionType,
+          type: 'animal' as SpeciesType,
         };
         const vaccinations = AnimalsService.parseVaccinations(data.vaccinations);
         const legacyVaccDate = AnimalsService.toDate(data.vaccinationDate);
         list.push({
           id: docSnapshot.id,
+          number: '',
           speciesId: data.speciesId ?? '',
           name: data.name ?? null,
           identifier: data.identifier ?? null,
           status: (data.status ?? 'alive') as AnimalStatus,
           birthDate: AnimalsService.toDate(data.birthDate),
-          vaccinationDate: legacyVaccDate ?? (vaccinations.length ? vaccinations[vaccinations.length - 1].date : null),
+          eggLayingDate: null,
+          hatchingDate: null,
+          vaccinationDate:
+            legacyVaccDate ??
+            (vaccinations.length ? vaccinations[vaccinations.length - 1].date : null),
           vaccinations: vaccinations.length ? vaccinations : undefined,
           createdAt: AnimalsService.toDate(data.createdAt),
           updatedAt: AnimalsService.toDate(data.updatedAt),
@@ -147,6 +163,7 @@ export class AnimalsService {
           speciesNameEn: info.nameEn,
           speciesNameAr: info.nameAr,
           reproductionType: info.reproductionType,
+          speciesType: info.type,
         });
       });
 
@@ -170,11 +187,7 @@ export class AnimalsService {
   ): Promise<{ id: string } | null> {
     const coll = collection(this.firestore, this.animalsCollectionName);
     const ident = identifier?.trim() ?? null;
-    const q = query(
-      coll,
-      where('speciesId', '==', speciesId),
-      where('identifier', '==', ident),
-    );
+    const q = query(coll, where('speciesId', '==', speciesId), where('identifier', '==', ident));
     const snapshot = await getDocs(q);
     const first = snapshot.docs[0];
     if (!first) return null;
@@ -189,11 +202,14 @@ export class AnimalsService {
     }
 
     const data = animalSnap.data() as {
+      number?: string;
       speciesId?: string;
       name?: string | null;
       identifier?: string | null;
       status?: AnimalStatus;
       birthDate?: unknown;
+      eggLayingDate?: unknown;
+      hatchingDate?: unknown;
       vaccinationDate?: unknown;
       vaccinations?: { name?: string; date?: unknown }[];
       createdAt?: unknown;
@@ -204,6 +220,7 @@ export class AnimalsService {
     let speciesNameEn = '';
     let speciesNameAr = '';
     let reproductionType: ReproductionType = 'gives_birth';
+    let speciesType: SpeciesType = 'animal';
     if (data.speciesId) {
       const speciesRef = doc(this.firestore, this.speciesCollectionName, data.speciesId);
       const speciesSnap = await getDoc(speciesRef);
@@ -213,11 +230,14 @@ export class AnimalsService {
           nameEn?: string;
           nameAr?: string;
           reproductionType?: ReproductionType;
+          type?: SpeciesType;
         };
         const fallback = s.name ?? '';
         speciesNameEn = s.nameEn ?? fallback;
         speciesNameAr = s.nameAr ?? fallback;
         reproductionType = (s.reproductionType ?? 'gives_birth') as ReproductionType;
+        speciesType = (s.type ??
+          (reproductionType === 'lays_egg' ? 'bird' : 'animal')) as SpeciesType;
       }
     }
 
@@ -225,12 +245,16 @@ export class AnimalsService {
     const legacyVaccDate = AnimalsService.toDate(data.vaccinationDate);
     return {
       id: animalSnap.id,
+      number: data.number ?? '',
       speciesId: data.speciesId ?? '',
       name: data.name ?? null,
       identifier: data.identifier ?? null,
       status: (data.status ?? 'alive') as AnimalStatus,
       birthDate: AnimalsService.toDate(data.birthDate),
-      vaccinationDate: legacyVaccDate ?? (vaccinations.length ? vaccinations[vaccinations.length - 1].date : null),
+      eggLayingDate: AnimalsService.toDate(data.eggLayingDate),
+      hatchingDate: AnimalsService.toDate(data.hatchingDate),
+      vaccinationDate:
+        legacyVaccDate ?? (vaccinations.length ? vaccinations[vaccinations.length - 1].date : null),
       vaccinations: vaccinations.length ? vaccinations : undefined,
       createdAt: AnimalsService.toDate(data.createdAt),
       updatedAt: AnimalsService.toDate(data.updatedAt),
@@ -238,31 +262,35 @@ export class AnimalsService {
       speciesNameEn,
       speciesNameAr,
       reproductionType,
+      speciesType,
     };
   }
 
   async add(dto: CreateAnimalDto): Promise<Animal> {
     const uid = this.auth.user()?.uid ?? null;
     try {
-      const vaccinationsPayload =
-        dto.vaccinations?.length ?
-          dto.vaccinations.map((v) => ({
+      const vaccinationsPayload = dto.vaccinations?.length
+        ? dto.vaccinations.map((v) => ({
             name: v.name?.trim() || '—',
             date: Timestamp.fromDate(v.date),
           }))
         : null;
       const legacyVaccDate: Date | null =
-        dto.vaccinationDate ?? (dto.vaccinations?.length ? dto.vaccinations[dto.vaccinations.length - 1].date : null);
+        dto.vaccinationDate ??
+        (dto.vaccinations?.length ? dto.vaccinations[dto.vaccinations.length - 1].date : null);
 
       const ident = dto.identifier?.trim() ?? null;
       const existing = await this.findExistingBySpeciesAndIdentifier(dto.speciesId, ident);
       if (existing) {
         await this.update(existing.id, {
+          number: dto.number,
           speciesId: dto.speciesId,
           name: dto.name?.trim() || null,
           identifier: ident,
           status: dto.status,
           birthDate: dto.birthDate,
+          eggLayingDate: dto.eggLayingDate,
+          hatchingDate: dto.hatchingDate,
           vaccinationDate: legacyVaccDate,
           vaccinations: dto.vaccinations?.length ? dto.vaccinations : undefined,
         });
@@ -270,11 +298,14 @@ export class AnimalsService {
         if (updated) {
           return {
             id: updated.id,
+            number: updated.number,
             speciesId: updated.speciesId,
             name: updated.name,
             identifier: updated.identifier,
             status: updated.status,
             birthDate: updated.birthDate,
+            eggLayingDate: updated.eggLayingDate,
+            hatchingDate: updated.hatchingDate,
             vaccinationDate: updated.vaccinationDate,
             vaccinations: updated.vaccinations,
             createdAt: updated.createdAt ?? new Date(),
@@ -285,11 +316,14 @@ export class AnimalsService {
       }
 
       const payload: Record<string, unknown> = {
+        number: dto.number,
         speciesId: dto.speciesId,
         name: dto.name?.trim() || null,
         identifier: ident,
         status: dto.status,
         birthDate: dto.birthDate ? Timestamp.fromDate(dto.birthDate) : null,
+        eggLayingDate: dto.eggLayingDate ? Timestamp.fromDate(dto.eggLayingDate) : null,
+        hatchingDate: dto.hatchingDate ? Timestamp.fromDate(dto.hatchingDate) : null,
         vaccinationDate: legacyVaccDate ? Timestamp.fromDate(legacyVaccDate) : null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -302,12 +336,17 @@ export class AnimalsService {
 
       return {
         id: ref.id,
+        number: dto.number,
         speciesId: dto.speciesId,
         name: dto.name?.trim() || null,
         identifier: ident,
         status: dto.status,
         birthDate: dto.birthDate,
-        vaccinationDate: dto.vaccinationDate ?? (dto.vaccinations?.length ? dto.vaccinations[dto.vaccinations.length - 1].date : null),
+        eggLayingDate: dto.eggLayingDate,
+        hatchingDate: dto.hatchingDate,
+        vaccinationDate:
+          dto.vaccinationDate ??
+          (dto.vaccinations?.length ? dto.vaccinations[dto.vaccinations.length - 1].date : null),
         vaccinations: dto.vaccinations,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -325,12 +364,24 @@ export class AnimalsService {
       const payload: Record<string, unknown> = {
         updatedAt: serverTimestamp(),
       };
+      if (dto['number'] !== undefined) payload['number'] = dto['number'];
       if (dto['speciesId'] !== undefined) payload['speciesId'] = dto['speciesId'];
       if (dto['name'] !== undefined) payload['name'] = dto['name']?.trim() || null;
-      if (dto['identifier'] !== undefined) payload['identifier'] = dto['identifier']?.trim() || null;
+      if (dto['identifier'] !== undefined)
+        payload['identifier'] = dto['identifier']?.trim() || null;
       if (dto['status'] !== undefined) payload['status'] = dto['status'];
       if (dto['birthDate'] !== undefined) {
         payload['birthDate'] = dto['birthDate'] ? Timestamp.fromDate(dto['birthDate']) : null;
+      }
+      if (dto['eggLayingDate'] !== undefined) {
+        payload['eggLayingDate'] = dto['eggLayingDate']
+          ? Timestamp.fromDate(dto['eggLayingDate'])
+          : null;
+      }
+      if (dto['hatchingDate'] !== undefined) {
+        payload['hatchingDate'] = dto['hatchingDate']
+          ? Timestamp.fromDate(dto['hatchingDate'])
+          : null;
       }
       if (dto['vaccinationDate'] !== undefined) {
         payload['vaccinationDate'] = dto['vaccinationDate']
@@ -338,9 +389,8 @@ export class AnimalsService {
           : null;
       }
       if (dto['vaccinations'] !== undefined) {
-        payload['vaccinations'] =
-          dto['vaccinations']?.length ?
-            dto['vaccinations'].map((v) => ({
+        payload['vaccinations'] = dto['vaccinations']?.length
+          ? dto['vaccinations'].map((v) => ({
               name: v.name?.trim() || '—',
               date: Timestamp.fromDate(v.date),
             }))

@@ -24,7 +24,10 @@ import { UiConfirmDialog } from '../../shared/ui/dialog/ui-confirm-dialog.compon
       class="card-glass mx-auto flex max-w-5xl items-center justify-between px-3 py-2.5 sm:px-4 sm:py-3"
     >
       <div class="flex min-w-0 items-center gap-2">
-        <a routerLink="/" class="text-base font-semibold tracking-[0.25em] uppercase text-muted shrink-0">
+        <a
+          routerLink="/"
+          class="text-base font-semibold tracking-[0.25em] uppercase text-muted shrink-0"
+        >
           {{ 'Anafora' }}
         </a>
       </div>
@@ -57,6 +60,10 @@ import { UiConfirmDialog } from '../../shared/ui/dialog/ui-confirm-dialog.compon
           <a routerLink="/animals" class="btn-ghost inline-flex items-center gap-2">
             <ng-icon name="faSolidCow" size="1rem" />
             {{ 'translate_animals-title' | translate }}
+          </a>
+          <a routerLink="/species/add" class="btn-ghost inline-flex items-center gap-2">
+            <ng-icon name="faSolidFeather" size="1rem" />
+            {{ 'translate_species-add-title' | translate }}
           </a>
           <app-ui-menu
             menuId="user"
@@ -93,10 +100,7 @@ import { UiConfirmDialog } from '../../shared/ui/dialog/ui-confirm-dialog.compon
 
     <!-- Mobile menu overlay and panel -->
     @if (mobileMenuOpen()) {
-      <div
-        class="fixed inset-0 z-30 md:hidden"
-        role="presentation"
-      >
+      <div class="fixed inset-0 z-30 md:hidden" role="presentation">
         <button
           type="button"
           class="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -107,8 +111,12 @@ import { UiConfirmDialog } from '../../shared/ui/dialog/ui-confirm-dialog.compon
           class="absolute end-0 top-0 bottom-0 w-full max-w-xs flex flex-col rounded-s-2xl border border-slate-200/70 border-e-0 bg-white/95 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/95 ms-auto"
           [attr.aria-label]="'translate_home' | translate"
         >
-          <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200/50 dark:border-white/10">
-            <span class="text-sm font-semibold text-slate-900 dark:text-slate-50">{{ 'translate_home' | translate }}</span>
+          <div
+            class="flex items-center justify-between px-4 py-3 border-b border-slate-200/50 dark:border-white/10"
+          >
+            <span class="text-sm font-semibold text-slate-900 dark:text-slate-50">{{
+              'translate_home' | translate
+            }}</span>
             <button
               type="button"
               class="btn-ghost h-9 w-9 p-0 rounded-xl"
@@ -145,7 +153,9 @@ import { UiConfirmDialog } from '../../shared/ui/dialog/ui-confirm-dialog.compon
             </a>
             <div class="my-2 h-px bg-slate-200/70 dark:bg-white/10"></div>
             <div class="flex flex-wrap items-center gap-2">
-              <span class="w-full px-2 text-xs font-medium text-muted">{{ 'translate_language' | translate }}</span>
+              <span class="w-full px-2 text-xs font-medium text-muted">{{
+                'translate_language' | translate
+              }}</span>
               <button
                 type="button"
                 class="btn-ghost rounded-xl px-3 py-2 text-xs"
@@ -162,7 +172,10 @@ import { UiConfirmDialog } from '../../shared/ui/dialog/ui-confirm-dialog.compon
               </button>
             </div>
             <div class="flex flex-wrap items-center gap-2">
-              <span class="w-full px-2 text-xs font-medium text-muted mt-2">{{ 'translate_light-mode' | translate }} / {{ 'translate_dark-mode' | translate }}</span>
+              <span class="w-full px-2 text-xs font-medium text-muted mt-2"
+                >{{ 'translate_light-mode' | translate }} /
+                {{ 'translate_dark-mode' | translate }}</span
+              >
               <button
                 type="button"
                 class="btn-ghost rounded-xl px-3 py-2 text-xs"
@@ -181,7 +194,9 @@ import { UiConfirmDialog } from '../../shared/ui/dialog/ui-confirm-dialog.compon
           </div>
           <!-- User menu at bottom -->
           <div class="mt-auto border-t border-slate-200/50 dark:border-white/10 p-3">
-            <div class="flex items-center gap-3 rounded-xl border border-slate-200/70 bg-white/40 px-3 py-2.5 dark:border-white/10 dark:bg-slate-800/60">
+            <div
+              class="flex items-center gap-3 rounded-xl border border-slate-200/70 bg-white/40 px-3 py-2.5 dark:border-white/10 dark:bg-slate-800/60"
+            >
               <span
                 class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-400 text-sm font-semibold text-slate-900"
               >
@@ -306,4 +321,3 @@ export class AppHeaderComponent {
     await this.router.navigate(['/login']);
   }
 }
-

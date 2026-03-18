@@ -40,7 +40,9 @@ const STATUS_KEYS: Record<AnimalStatus, string> = {
   template: `
     <section class="card-glass p-4 sm:p-6 rounded-xl sm:rounded-2xl">
       @if (loading()) {
-        <p class="text-sm sm:text-base text-muted">{{ 'translate_animals-title' | translate }}...</p>
+        <p class="text-sm sm:text-base text-muted">
+          {{ 'translate_animals-title' | translate }}...
+        </p>
       } @else if (!animal()) {
         <p class="text-sm sm:text-base text-muted">{{ 'translate_animals-empty' | translate }}</p>
         <a routerLink="/animals" class="btn-ghost mt-2 inline-block text-xs px-3 py-2">
@@ -48,7 +50,9 @@ const STATUS_KEYS: Record<AnimalStatus, string> = {
         </a>
       } @else {
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h1 class="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-50 min-w-0 truncate">
+          <h1
+            class="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-50 min-w-0 truncate"
+          >
             {{ 'translate_animals-detail-title' | translate }}
           </h1>
           <a routerLink="/animals" class="btn-ghost w-fit px-3 py-2 sm:px-4 sm:py-1.5 text-xs">
@@ -57,26 +61,42 @@ const STATUS_KEYS: Record<AnimalStatus, string> = {
         </div>
 
         <dl class="mt-4 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
+          <dt class="text-muted">{{ 'translate_animals-number' | translate }}</dt>
+          <dd class="text-slate-900 dark:text-slate-50">{{ animal()!.number || '—' }}</dd>
           <dt class="text-muted">{{ 'translate_name' | translate }}</dt>
           <dd class="text-slate-900 dark:text-slate-50">{{ animal()!.name || '—' }}</dd>
           <dt class="text-muted">{{ 'translate_animals-identifier' | translate }}</dt>
           <dd class="text-slate-900 dark:text-slate-50">{{ animal()!.identifier || '—' }}</dd>
           <dt class="text-muted">{{ 'translate_animals-filter-species-label' | translate }}</dt>
           <dd class="text-slate-900 dark:text-slate-50">{{ speciesDisplayName() }}</dd>
+          <dt class="text-muted">{{ 'translate_species-type' | translate }}</dt>
+          <dd class="text-slate-900 dark:text-slate-50">{{ speciesTypeLabel() }}</dd>
           <dt class="text-muted">{{ 'translate_animals-reproduction-type' | translate }}</dt>
           <dd class="text-slate-900 dark:text-slate-50">{{ reproductionLabel() }}</dd>
           <dt class="text-muted">{{ 'translate_status' | translate }}</dt>
           <dd class="text-slate-900 dark:text-slate-50">{{ statusLabel() }}</dd>
-          <dt class="text-muted">{{ 'translate_animals-birth-date' | translate }}</dt>
-          <dd class="text-slate-900 dark:text-slate-50">
-            {{ animal()?.birthDate?.toLocaleDateString() ?? '—' }}
-          </dd>
+          @if (isAnimalType()) {
+            <dt class="text-muted">{{ 'translate_animals-birth-date' | translate }}</dt>
+            <dd class="text-slate-900 dark:text-slate-50">
+              {{ animal()?.birthDate?.toLocaleDateString() ?? '—' }}
+            </dd>
+            <dt class="text-muted">{{ 'translate_animals-age' | translate }}</dt>
+            <dd class="text-slate-900 dark:text-slate-50">{{ ageDisplay() ?? '—' }}</dd>
+          }
+          @if (isBirdType()) {
+            <dt class="text-muted">{{ 'translate_animals-egg-laying-date' | translate }}</dt>
+            <dd class="text-slate-900 dark:text-slate-50">
+              {{ animal()?.eggLayingDate?.toLocaleDateString() ?? '—' }}
+            </dd>
+            <dt class="text-muted">{{ 'translate_animals-hatching-date' | translate }}</dt>
+            <dd class="text-slate-900 dark:text-slate-50">
+              {{ animal()?.hatchingDate?.toLocaleDateString() ?? '—' }}
+            </dd>
+          }
           <dt class="text-muted">{{ 'translate_animals-vaccination-date' | translate }}</dt>
           <dd class="text-slate-900 dark:text-slate-50">
             {{ animal()?.vaccinationDate?.toLocaleDateString() ?? '—' }}
           </dd>
-          <dt class="text-muted">{{ 'translate_animals-age' | translate }}</dt>
-          <dd class="text-slate-900 dark:text-slate-50">{{ ageDisplay() ?? '—' }}</dd>
         </dl>
       }
     </section>
@@ -100,19 +120,27 @@ const STATUS_KEYS: Record<AnimalStatus, string> = {
                 class="rounded-lg sm:rounded-xl border border-slate-200/70 bg-white/40 p-2.5 sm:p-3 text-xs dark:border-white/10 dark:bg-slate-900/40"
               >
                 <p class="text-muted">
-                  {{ c.createdAt ? (c.createdAt | date:'medium') : '' }}
+                  {{ c.createdAt ? (c.createdAt | date: 'medium') : '' }}
                 </p>
                 <p class="mt-1 text-slate-900 dark:text-slate-50">{{ c.text }}</p>
                 @if (c.type === 'medicine' && (c.medicineName || c.dose || c.nextDoseDate)) {
                   <p class="mt-2 text-muted">
                     @if (c.medicineName) {
-                      <span>{{ 'translate_animals-comment-medicine-name' | translate }}: {{ c.medicineName }}</span>
+                      <span
+                        >{{ 'translate_animals-comment-medicine-name' | translate }}:
+                        {{ c.medicineName }}</span
+                      >
                     }
                     @if (c.dose) {
-                      <span class="ms-2">{{ 'translate_animals-comment-dose' | translate }}: {{ c.dose }}</span>
+                      <span class="ms-2"
+                        >{{ 'translate_animals-comment-dose' | translate }}: {{ c.dose }}</span
+                      >
                     }
                     @if (c.nextDoseDate) {
-                      <span class="ms-2">{{ 'translate_animals-comment-next-dose-date' | translate }}: {{ c.nextDoseDate | date:'shortDate' }}</span>
+                      <span class="ms-2"
+                        >{{ 'translate_animals-comment-next-dose-date' | translate }}:
+                        {{ c.nextDoseDate | date: 'shortDate' }}</span
+                      >
                     }
                   </p>
                 }
@@ -135,20 +163,29 @@ const STATUS_KEYS: Record<AnimalStatus, string> = {
             ></textarea>
           </div>
           <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-            <span class="text-[11px] text-muted">{{ 'translate_animals-comment-type-general' | translate }} / {{ 'translate_animals-comment-type-medicine' | translate }}</span>
+            <span class="text-[11px] text-muted"
+              >{{ 'translate_animals-comment-type-general' | translate }} /
+              {{ 'translate_animals-comment-type-medicine' | translate }}</span
+            >
             <select
               class="input-glass w-full sm:w-auto min-h-9 text-xs"
               [value]="commentType()"
               (change)="commentType.set($any($event.target).value)"
             >
-              <option value="general">{{ 'translate_animals-comment-type-general' | translate }}</option>
-              <option value="medicine">{{ 'translate_animals-comment-type-medicine' | translate }}</option>
+              <option value="general">
+                {{ 'translate_animals-comment-type-general' | translate }}
+              </option>
+              <option value="medicine">
+                {{ 'translate_animals-comment-type-medicine' | translate }}
+              </option>
             </select>
           </div>
           @if (commentType() === 'medicine') {
             <div class="grid gap-2 sm:grid-cols-3">
               <div>
-                <label class="block text-[11px] text-muted">{{ 'translate_animals-comment-medicine-name' | translate }}</label>
+                <label class="block text-[11px] text-muted">{{
+                  'translate_animals-comment-medicine-name' | translate
+                }}</label>
                 <input
                   type="text"
                   class="input-glass w-full text-xs"
@@ -157,7 +194,9 @@ const STATUS_KEYS: Record<AnimalStatus, string> = {
                 />
               </div>
               <div>
-                <label class="block text-[11px] text-muted">{{ 'translate_animals-comment-dose' | translate }}</label>
+                <label class="block text-[11px] text-muted">{{
+                  'translate_animals-comment-dose' | translate
+                }}</label>
                 <input
                   type="text"
                   class="input-glass w-full text-xs"
@@ -166,7 +205,9 @@ const STATUS_KEYS: Record<AnimalStatus, string> = {
                 />
               </div>
               <div>
-                <label class="block text-[11px] text-muted">{{ 'translate_animals-comment-next-dose-date' | translate }}</label>
+                <label class="block text-[11px] text-muted">{{
+                  'translate_animals-comment-next-dose-date' | translate
+                }}</label>
                 <input
                   type="date"
                   class="input-glass w-full text-xs"
@@ -194,10 +235,9 @@ export class AnimalDetailPage {
   private readonly commentsService = inject(AnimalCommentsService);
   private readonly translation = inject(TranslationService);
 
-  private readonly routeId = toSignal(
-    this.route.paramMap.pipe(map((p) => p.get('id') ?? '')),
-    { initialValue: '' },
-  );
+  private readonly routeId = toSignal(this.route.paramMap.pipe(map((p) => p.get('id') ?? '')), {
+    initialValue: '',
+  });
 
   protected readonly animal = signal<AnimalWithSpecies | null>(null);
   protected readonly loading = signal(true);
@@ -225,9 +265,10 @@ export class AnimalDetailPage {
   protected readonly reproductionLabel = computed(() => {
     const a = this.animal();
     if (!a) return '—';
-    const key = a.reproductionType === 'lays_egg'
-      ? 'translate_animals-reproduction-lays-egg'
-      : 'translate_animals-reproduction-gives-birth';
+    const key =
+      a.reproductionType === 'lays_egg'
+        ? 'translate_animals-reproduction-lays-egg'
+        : 'translate_animals-reproduction-gives-birth';
     return this.translation.instant(key);
   });
 
@@ -237,14 +278,35 @@ export class AnimalDetailPage {
     return getAgeFromBirthDate(a.birthDate);
   });
 
+  protected readonly isAnimalType = computed(() => {
+    const a = this.animal();
+    return a?.speciesType === 'animal';
+  });
+
+  protected readonly isBirdType = computed(() => {
+    const a = this.animal();
+    return a?.speciesType === 'bird';
+  });
+
+  protected readonly speciesTypeLabel = computed(() => {
+    const a = this.animal();
+    if (!a) return '—';
+    return a.speciesType === 'bird'
+      ? this.translation.instant('translate_species-type-bird')
+      : this.translation.instant('translate_species-type-animal');
+  });
+
   constructor() {
-    effect(() => {
-      const id = this.routeId();
-      if (id) {
-        void this.loadAnimal(id);
-        void this.loadComments(id);
-      }
-    }, { allowSignalWrites: true });
+    effect(
+      () => {
+        const id = this.routeId();
+        if (id) {
+          void this.loadAnimal(id);
+          void this.loadComments(id);
+        }
+      },
+      { allowSignalWrites: true },
+    );
   }
 
   private async loadAnimal(id: string): Promise<void> {
@@ -277,9 +339,7 @@ export class AnimalDetailPage {
     if (!text || !this.animal()) return;
     this.addingComment.set(true);
     const type = this.commentType();
-    const nextDate = this.nextDoseDate().trim()
-      ? new Date(this.nextDoseDate())
-      : null;
+    const nextDate = this.nextDoseDate().trim() ? new Date(this.nextDoseDate()) : null;
     try {
       const newComment = await this.commentsService.addComment(this.animal()!.id, {
         text,
