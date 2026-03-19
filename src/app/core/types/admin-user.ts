@@ -5,5 +5,7 @@ export interface AdminUser {
   email: string | null;
   displayName: string | null;
   role: Role;
+  isActive?: boolean;
+  lastLoginAt?: Date;
+  createdAt?: Date;
 }
-

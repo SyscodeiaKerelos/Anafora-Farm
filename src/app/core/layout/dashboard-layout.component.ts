@@ -121,10 +121,11 @@ interface NavItem {
       </nav>
 
       <!-- User Section -->
-      <div class="border-t border-slate-200/70 p-4 dark:border-white/10">
+      <div class="border-t border-slate-200/70 p-4 dark:border-white/10 space-y-3">
+        <!-- User Info -->
         <div class="flex items-center gap-3">
           <div
-            class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-sm font-semibold text-white"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-sm font-semibold text-white"
           >
             {{ userInitials() }}
           </div>
@@ -138,15 +139,48 @@ interface NavItem {
           </div>
           <button
             type="button"
-            class="btn-ghost h-8 w-8 p-0 rounded-lg"
-            (click)="themeService.toggleTheme()"
+            class="shrink-0 rounded-lg p-2 text-slate-500 transition-all hover:bg-slate-100 hover:text-red-500 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-red-400"
+            (click)="showSignOutConfirm.set(true)"
+            [attr.aria-label]="'translate_logout-label' | translate"
           >
-            <ng-icon
-              [name]="themeService.isDark() ? 'faSolidMoon' : 'faSolidSun'"
-              size="0.875rem"
-            />
+            <ng-icon name="faSolidArrowRightFromBracket" size="1rem" />
           </button>
         </div>
+
+        <!-- Dark Mode Toggle -->
+        <button
+          type="button"
+          class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+          (click)="themeService.toggleTheme()"
+        >
+          @if (themeService.isDark()) {
+            <span
+              class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-700 text-amber-400"
+            >
+              <ng-icon name="faSolidMoon" size="0.875rem" />
+            </span>
+          } @else {
+            <span
+              class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-600"
+            >
+              <ng-icon name="faSolidSun" size="0.875rem" />
+            </span>
+          }
+        </button>
+
+        <!-- Language Toggle -->
+        <button
+          type="button"
+          class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+          (click)="toggleLanguage()"
+        >
+          <span
+            class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
+          >
+            <ng-icon name="faSolidGlobe" size="0.875rem" />
+          </span>
+          <span>{{ translationService.currentLang() | uppercase }}</span>
+        </button>
       </div>
     </aside>
 
@@ -341,6 +375,10 @@ export class DashboardLayoutComponent {
     if (lang === 'en' || lang === 'ar') {
       this.translationService.setLanguage(lang);
     }
+  }
+
+  protected toggleLanguage(): void {
+    this.translationService.toggleLanguage();
   }
 
   protected isActive(route: string): boolean {

@@ -7,12 +7,15 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  sendPasswordResetEmail,
+  ActionCodeSettings,
 } from 'firebase/auth';
 import { collection, doc, getDoc } from 'firebase/firestore';
 
 import { getFirebaseAuth, getFirebaseDb } from '../../core/config/firebase.config';
 import { Role, RoleHierarchy } from '../types/role';
 import { TranslationService } from '../services/translation.service';
+import { NotificationService } from './notification.service';
 
 export interface Credentials {
   email: string;
@@ -31,6 +34,7 @@ export class AuthService {
   private readonly auth: Auth = getFirebaseAuth();
   private readonly db = getFirebaseDb();
   private readonly translation = inject(TranslationService);
+  private readonly notification = inject(NotificationService);
 
   private readonly _user = signal<AuthUser | null>(null);
 
@@ -105,6 +109,44 @@ export class AuthService {
     await signOut(this.auth);
   }
 
+  async resetPassword(email: string): Promise<void> {
+    const actionCodeSettings: ActionCodeSettings = {
+      url: `${window.location.origin}/login`,
+      handleCodeInApp: true,
+    };
+    await sendPasswordResetEmail(this.auth, email, actionCodeSettings);
+  }
+
+  async resetPasswordWithCustomUrl(email: string, continueUrl: string): Promise<void> {
+    const actionCodeSettings: ActionCodeSettings = {
+      url: continueUrl,
+      handleCodeInApp: true,
+    };
+    await sendPasswordResetEmail(this.auth, email, actionCodeSettings);
+  }
+
+  mapResetPasswordErrorToMessage(error: unknown): string | null {
+    if (!error || typeof error !== 'object') {
+      return null;
+    }
+
+    const code = (error as { code?: string }).code ?? '';
+
+    if (code.includes('auth/user-not-found')) {
+      return this.translation.instant('translate_reset-password-error-user-not-found');
+    }
+
+    if (code.includes('auth/invalid-email')) {
+      return this.translation.instant('translate_reset-password-error-invalid-email');
+    }
+
+    if (code.includes('auth/too-many-requests')) {
+      return this.translation.instant('translate_reset-password-error-too-many-requests');
+    }
+
+    return null;
+  }
+
   hasAtLeastRole(required: Role): boolean {
     const current = this._user()?.role;
     if (!current) {
@@ -169,4 +211,3 @@ export class AuthService {
     return 'user';
   }
 }
-

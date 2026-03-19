@@ -1,13 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  FormField,
-  form,
-  required,
-  email,
-  submit,
-} from '@angular/forms/signals';
+import { FormField, form, required, email, submit } from '@angular/forms/signals';
+import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
+import { PasswordModule } from 'primeng/password';
 
 import { AdminUser } from '../../core/types/admin-user';
 import { Role } from '../../core/types/role';
@@ -16,9 +12,21 @@ import { UserDirectoryService } from '../../core/services/user-directory.service
 import { UiButton } from '../../shared/ui/button/ui-button.component';
 
 const ROLES: { value: Role; labelKey: string; capabilitiesKey: string }[] = [
-  { value: 'superAdmin', labelKey: 'translate_role-super-admin-label', capabilitiesKey: 'translate_role-super-admin-capabilities' },
-  { value: 'admin', labelKey: 'translate_role-admin-label', capabilitiesKey: 'translate_role-admin-capabilities' },
-  { value: 'user', labelKey: 'translate_role-user-label', capabilitiesKey: 'translate_role-user-capabilities' },
+  {
+    value: 'superAdmin',
+    labelKey: 'translate_role-super-admin-label',
+    capabilitiesKey: 'translate_role-super-admin-capabilities',
+  },
+  {
+    value: 'admin',
+    labelKey: 'translate_role-admin-label',
+    capabilitiesKey: 'translate_role-admin-capabilities',
+  },
+  {
+    value: 'user',
+    labelKey: 'translate_role-user-label',
+    capabilitiesKey: 'translate_role-user-capabilities',
+  },
 ];
 
 interface AddUserModel {
@@ -31,7 +39,7 @@ interface AddUserModel {
 @Component({
   selector: 'app-add-user-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormField, TranslatePipe, UiButton],
+  imports: [CommonModule, FormField, TranslatePipe, UiButton, PasswordModule, FormsModule],
   template: `
     @if (open() === true) {
       <div
@@ -85,17 +93,20 @@ interface AddUserModel {
                 {{ 'translate_password' | translate }}
                 <span class="text-red-400">*</span>
               </label>
-              <input
+              <p-password
                 id="add-user-password"
-                type="password"
-                class="input-glass w-full text-xs"
-                [attr.placeholder]="'translate_admin-users-dialog-password-placeholder' | translate"
-                [formField]="addUserForm.password"
+                [(ngModel)]="model().password"
+                name="password"
+                [toggleMask]="true"
+                [feedback]="false"
+                placeholder="{{ 'translate_admin-users-dialog-password-placeholder' | translate }}"
+                styleClass="w-full"
                 autocomplete="new-password"
+                class="block w-full"
               />
-              @if (addUserForm.password().touched() && addUserForm.password().invalid()) {
+              @if (passwordError()) {
                 <p class="mt-0.5 text-[11px] text-red-400">
-                  {{ addUserForm.password().errors()[0]?.message | translate }}
+                  {{ passwordError() }}
                 </p>
               }
             </div>
@@ -111,7 +122,9 @@ interface AddUserModel {
                 id="add-user-displayName"
                 type="text"
                 class="input-glass w-full text-xs"
-                [attr.placeholder]="'translate_admin-users-dialog-display-name-placeholder' | translate"
+                [attr.placeholder]="
+                  'translate_admin-users-dialog-display-name-placeholder' | translate
+                "
                 [formField]="addUserForm.displayName"
                 autocomplete="name"
               />
@@ -159,16 +172,18 @@ interface AddUserModel {
                 size="sm"
                 labelKey="translate_cancel"
                 [disabled]="submitting()"
-                (click)="onCancel()"
+                (clicked)="onCancel()"
               />
               <button
                 type="submit"
                 class="btn-primary inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs"
-                [disabled]="addUserForm().invalid() || submitting()"
+                [disabled]="!isFormValid() || submitting()"
               >
                 @if (submitting()) {
                   <span class="inline-flex items-center gap-2">
-                    <span class="h-3 w-3 animate-spin rounded-full border border-slate-900 dark:border-slate-50 border-t-transparent"></span>
+                    <span
+                      class="h-3 w-3 animate-spin rounded-full border border-slate-900 dark:border-slate-50 border-t-transparent"
+                    ></span>
                     <span>{{ 'translate_admin-users-dialog-create' | translate }}</span>
                   </span>
                 } @else {
@@ -215,12 +230,35 @@ export class AddUserDialogComponent {
 
   protected readonly submitting = signal(false);
   protected readonly formError = signal<string | null>(null);
+  protected readonly passwordError = signal<string | null>(null);
 
   protected readonly selectedRoleCapabilitiesKey = () => {
     const role = this.model().role;
     const option = ROLES.find((r) => r.value === role);
     return option?.capabilitiesKey ?? 'translate_role-user-capabilities';
   };
+
+  protected isFormValid(): boolean {
+    const m = this.model();
+    const emailValid = this.isValidEmail(m.email);
+    const passwordValid = !!m.password;
+    const roleValid = !!m.role;
+    return emailValid && passwordValid && roleValid;
+  }
+
+  protected onPasswordBlur(): void {
+    if (!this.model().password) {
+      this.passwordError.set(this.translation.instant('translate_validation-password-required'));
+    } else {
+      this.passwordError.set(null);
+    }
+  }
+
+  private isValidEmail(email: string): boolean {
+    if (!email) return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
 
   protected onEscape(): void {
     if (this.open() && !this.submitting()) {

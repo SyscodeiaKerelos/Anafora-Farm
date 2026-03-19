@@ -40,3 +40,11 @@ export interface DeactivateUserResponse {
   uid: string;
   isActive: boolean;
 }
+
+export interface DeleteUserRequest {
+  uid: string;
+}
+
+export interface DeleteUserResponse {
+  success: boolean;
+}

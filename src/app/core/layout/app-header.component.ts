@@ -35,19 +35,21 @@ import { UiConfirmDialog } from '../../shared/ui/dialog/ui-confirm-dialog.compon
       <!-- Desktop nav: visible from md up -->
       <div class="hidden md:flex items-center gap-2 lg:gap-3">
         <app-ui-menu
-          menuId="language"
-          [labelKey]="'translate_language'"
-          icon="faSolidGlobe"
-          [items]="languageItems"
-          (itemSelected)="onLanguageSelected($event)"
-        />
-        <app-ui-menu
           menuId="theme"
           [labelKey]="themeService.isDark() ? 'translate_dark-mode' : 'translate_light-mode'"
           [icon]="themeService.isDark() ? 'faSolidMoon' : 'faSolidSun'"
           [items]="themeItems"
           (itemSelected)="onThemeSelected($event)"
         />
+        <button
+          type="button"
+          class="btn-ghost inline-flex items-center gap-2 text-sm"
+          (click)="toggleLanguage()"
+          [attr.aria-label]="'translate_language' | translate"
+        >
+          <ng-icon name="faSolidGlobe" size="1rem" />
+          <span>{{ translationService.currentLang() | uppercase }}</span>
+        </button>
         @if (!authService.isAuthenticated()) {
           <button type="button" class="btn-primary" (click)="goToLogin()">
             {{ 'translate_login-submit-label' | translate }}
@@ -159,16 +161,10 @@ import { UiConfirmDialog } from '../../shared/ui/dialog/ui-confirm-dialog.compon
               <button
                 type="button"
                 class="btn-ghost rounded-xl px-3 py-2 text-xs"
-                (click)="onLanguageSelected('en'); closeMobileMenu()"
+                (click)="toggleLanguage()"
               >
-                {{ 'translate_english' | translate }}
-              </button>
-              <button
-                type="button"
-                class="btn-ghost rounded-xl px-3 py-2 text-xs"
-                (click)="onLanguageSelected('ar'); closeMobileMenu()"
-              >
-                {{ 'translate_arabic' | translate }}
+                <ng-icon name="faSolidGlobe" size="0.875rem" class="shrink-0 me-1" />
+                {{ translationService.currentLang() | uppercase }}
               </button>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -290,6 +286,10 @@ export class AppHeaderComponent {
     if (id === 'en' || id === 'ar') {
       this.translationService.setLanguage(id);
     }
+  }
+
+  protected toggleLanguage(): void {
+    this.translationService.toggleLanguage();
   }
 
   protected onThemeSelected(id: string): void {

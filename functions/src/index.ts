@@ -8,6 +8,8 @@ import type {
   DeactivateUserResponse,
   UpdateUserRoleRequest,
   UpdateUserRoleResponse,
+  DeleteUserRequest,
+  DeleteUserResponse,
 } from './types/callable';
 import type { Role } from './types/role';
 import { isValidRole } from './types/role';
@@ -18,17 +20,16 @@ const auth = admin.auth();
 const db = admin.firestore();
 
 /** CORS: allow all origins. Callable functions are protected by auth (assertIsSuperAdmin). */
-function assertIsSuperAdmin(requestAuth: { uid: string; token?: Record<string, unknown> } | undefined): void {
+function assertIsSuperAdmin(
+  requestAuth: { uid: string; token?: Record<string, unknown> } | undefined,
+): void {
   if (!requestAuth) {
     throw new HttpsError('unauthenticated', 'Authentication required.');
   }
 
   const role = requestAuth.token?.role as Role | undefined;
   if (role !== 'superAdmin') {
-    throw new HttpsError(
-      'permission-denied',
-      'Only super administrators can perform this action.',
-    );
+    throw new HttpsError('permission-denied', 'Only super administrators can perform this action.');
   }
 }
 
@@ -122,10 +123,7 @@ export const updateUserRole = onCall(
 
     const updatedAt = admin.firestore.Timestamp.now();
 
-    await db
-      .collection('users')
-      .doc(uid)
-      .set({ role, updatedAt }, { merge: true });
+    await db.collection('users').doc(uid).set({ role, updatedAt }, { merge: true });
 
     return { uid, role };
   },
@@ -180,3 +178,19 @@ export const syncUserClaimsOnProfileChange = functionsV1.firestore
 
     await auth.setCustomUserClaims(context.params.uid, { role: newRole });
   });
+
+export const deleteUser = onCall({ cors: true }, async (request): Promise<DeleteUserResponse> => {
+  assertIsSuperAdmin(request.auth);
+
+  const data = request.data as DeleteUserRequest;
+  const { uid } = data;
+
+  if (!uid || typeof uid !== 'string') {
+    throw new HttpsError('invalid-argument', 'A valid uid is required.');
+  }
+
+  await auth.deleteUser(uid);
+  await db.collection('users').doc(uid).delete();
+
+  return { success: true };
+});

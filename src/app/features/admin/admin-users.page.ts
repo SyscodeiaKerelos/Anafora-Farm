@@ -7,6 +7,7 @@ import { Role } from '../../core/types/role';
 import { TranslationService } from '../../core/services/translation.service';
 import { AdminUser } from '../../core/types/admin-user';
 import { UserDirectoryService } from '../../core/services/user-directory.service';
+import { NotificationService } from '../../core/services/notification.service';
 import {
   UiDataTable,
   type ColumnConfig,
@@ -14,16 +15,25 @@ import {
   type TableRowActionEvent,
 } from '../../shared/ui/table/ui-data-table.component';
 import { AddUserDialogComponent } from './add-user-dialog.component';
+import { UiConfirmDialog } from '../../shared/ui/dialog/ui-confirm-dialog.component';
+import { UiButton } from '../../shared/ui/button/ui-button.component';
 
 @Component({
   selector: 'app-admin-users-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, TranslatePipe, UiDataTable, AddUserDialogComponent],
+  imports: [
+    CommonModule,
+    TranslatePipe,
+    UiDataTable,
+    AddUserDialogComponent,
+    UiConfirmDialog,
+    UiButton,
+  ],
   host: {
     class: 'block space-y-6',
   },
   template: `
-    @if (canManage()) {
+    @if (!canManage()) {
       <section class="card-glass p-6 text-center">
         <h1 class="text-xl font-semibold text-slate-900 dark:text-slate-50">
           {{ 'translate_admin-restricted-title' | translate }}
@@ -44,20 +54,18 @@ import { AddUserDialogComponent } from './add-user-dialog.component';
             </p>
           </div>
           <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="btn-primary"
-              (click)="openAddUserDialog()"
-            >
-              {{ 'translate_admin-users-add-user' | translate }}
-            </button>
-            <button
-              type="button"
-              class="btn-ghost"
-              (click)="reload()"
-            >
-              {{ 'translate_admin-users-refresh' | translate }}
-            </button>
+            <app-ui-button
+              variant="primary"
+              size="sm"
+              labelKey="translate_admin-users-add-user"
+              (clicked)="openAddUserDialog()"
+            />
+            <app-ui-button
+              variant="ghost"
+              size="sm"
+              labelKey="translate_admin-users-refresh"
+              (clicked)="reload()"
+            />
           </div>
         </header>
 
@@ -71,9 +79,23 @@ import { AddUserDialogComponent } from './add-user-dialog.component';
           (rowAction)="onRowAction($event)"
         />
 
-        <p class="mt-3 text-xs text-muted">
-          {{ 'translate_admin-users-footer-note' | translate }}
-        </p>
+        <div class="mt-4 flex items-center justify-between">
+          <p class="text-xs text-muted">
+            {{ 'translate_admin-users-footer-note' | translate }}
+          </p>
+          @if (stats()) {
+            <div class="flex items-center gap-4 text-xs text-muted">
+              <span class="flex items-center gap-1">
+                <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+                {{ stats().active }} {{ 'translate_admin-users-active' | translate }}
+              </span>
+              <span class="flex items-center gap-1">
+                <span class="h-2 w-2 rounded-full bg-red-500"></span>
+                {{ stats().inactive }} {{ 'translate_admin-users-inactive' | translate }}
+              </span>
+            </div>
+          }
+        </div>
       </section>
     }
 
@@ -82,12 +104,22 @@ import { AddUserDialogComponent } from './add-user-dialog.component';
       (created)="onUserCreated($event)"
       (closed)="closeAddUserDialog()"
     />
+
+    <app-ui-confirm-dialog
+      [open]="confirmDialog().open"
+      [titleKey]="confirmDialog().titleKey"
+      [messageKey]="confirmDialog().messageKey"
+      [confirmLabelKey]="confirmDialog().confirmLabelKey"
+      (confirmed)="onConfirmAction()"
+      (cancelled)="closeConfirmDialog()"
+    />
   `,
 })
 export class AdminUsersPage {
   private readonly authService = inject(AuthService);
   private readonly translation = inject(TranslationService);
   private readonly userDirectory = inject(UserDirectoryService);
+  private readonly notification = inject(NotificationService);
 
   protected readonly users = signal<AdminUser[]>([]);
   protected readonly loading = signal(true);
@@ -95,6 +127,32 @@ export class AdminUsersPage {
 
   protected readonly canManage = computed(() => this.authService.hasAtLeastRole('superAdmin'));
   protected readonly addUserDialogOpen = signal(false);
+
+  protected readonly confirmDialog = signal<{
+    open: boolean;
+    titleKey: string;
+    messageKey: string;
+    confirmLabelKey: string;
+    action: 'deactivate' | 'delete' | null;
+    userId: string | null;
+  }>({
+    open: false,
+    titleKey: '',
+    messageKey: '',
+    confirmLabelKey: '',
+    action: null,
+    userId: null,
+  });
+
+  protected readonly confirmLoading = signal(false);
+
+  protected readonly stats = computed(() => {
+    const all = this.users();
+    return {
+      active: all.filter((u) => u.isActive !== false).length,
+      inactive: all.filter((u) => u.isActive === false).length,
+    };
+  });
 
   protected readonly columns: ColumnConfig<AdminUser>[] = [
     {
@@ -113,8 +171,14 @@ export class AdminUsersPage {
       widthClass: 'w-32',
     },
     {
+      headerKey: 'translate_status',
+      field: 'isActive',
+      widthClass: 'w-24',
+    },
+    {
       headerKey: 'translate_actions',
       align: 'right',
+      widthClass: 'w-40',
       actions: [
         {
           id: 'user',
@@ -130,6 +194,25 @@ export class AdminUsersPage {
           id: 'superAdmin',
           labelKey: 'translate_role-super-admin-label',
           variant: 'primary',
+        },
+      ],
+    },
+    {
+      headerKey: '',
+      align: 'right',
+      widthClass: 'w-20',
+      actions: [
+        {
+          id: 'deactivate',
+          labelKey: 'translate_deactivate',
+          variant: 'ghost',
+          icon: 'faSolidBan',
+        },
+        {
+          id: 'delete',
+          labelKey: 'translate_delete',
+          variant: 'danger',
+          icon: 'faSolidTrash',
         },
       ],
     },
@@ -179,9 +262,80 @@ export class AdminUsersPage {
       return;
     }
 
-    const role = event.actionId as Role;
+    const { actionId, row } = event;
+
+    if (actionId === 'deactivate') {
+      this.openDeactivateDialog(row);
+      return;
+    }
+
+    if (actionId === 'delete') {
+      this.openDeleteDialog(row);
+      return;
+    }
+
+    const role = actionId as Role;
     if (role === 'user' || role === 'admin' || role === 'superAdmin') {
       void this.updateRole(event.row.id, role);
+    }
+  }
+
+  openDeactivateDialog(user: AdminUser): void {
+    this.confirmDialog.set({
+      open: true,
+      titleKey: 'translate_deactivate-user-title',
+      messageKey: 'translate_deactivate-user-message',
+      confirmLabelKey: 'translate_deactivate',
+      action: 'deactivate',
+      userId: user.id,
+    });
+  }
+
+  openDeleteDialog(user: AdminUser): void {
+    this.confirmDialog.set({
+      open: true,
+      titleKey: 'translate_delete-user-title',
+      messageKey: 'translate_delete-user-message',
+      confirmLabelKey: 'translate_delete',
+      action: 'delete',
+      userId: user.id,
+    });
+  }
+
+  closeConfirmDialog(): void {
+    this.confirmDialog.set({
+      open: false,
+      titleKey: '',
+      messageKey: '',
+      confirmLabelKey: '',
+      action: null,
+      userId: null,
+    });
+  }
+
+  async onConfirmAction(): Promise<void> {
+    const dialog = this.confirmDialog();
+    if (!dialog.action || !dialog.userId) return;
+
+    this.confirmLoading.set(true);
+
+    try {
+      if (dialog.action === 'deactivate') {
+        await this.userDirectory.deactivateUser(dialog.userId);
+        this.users.update((current) =>
+          current.map((u) => (u.id === dialog.userId ? { ...u, isActive: false } : u)),
+        );
+        this.notification.showSuccess('translate_deactivate-user-success');
+      } else if (dialog.action === 'delete') {
+        await this.userDirectory.deleteUser(dialog.userId);
+        this.users.update((current) => current.filter((u) => u.id !== dialog.userId));
+        this.notification.showSuccess('translate_delete-user-success');
+      }
+    } catch {
+      // Error already shown via NotificationService
+    } finally {
+      this.confirmLoading.set(false);
+      this.closeConfirmDialog();
     }
   }
 
@@ -220,4 +374,3 @@ export class AdminUsersPage {
     }
   }
 }
-

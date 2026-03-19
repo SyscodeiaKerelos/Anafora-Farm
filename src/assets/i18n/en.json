@@ -9,6 +9,8 @@
   "translate_light-mode": "Light Mode",
   "translate_light": "Light",
   "translate_dark": "Dark",
+  "translate_on": "On",
+  "translate_off": "Off",
   "translate_language": "Language",
   "translate_english": "English",
   "translate_arabic": "Arabic",
@@ -79,6 +81,22 @@
   "translate_login-error-generic": "Unable to sign in. Please check your details and try again.",
   "translate_login-error-google": "Google sign-in failed. Please try again.",
 
+  "translate_forgot-password-link": "Forgot password ?",
+  "translate_forgot-password-title": "Reset password",
+  "translate_forgot-password-subtitle": "Enter your email to receive a password reset link.",
+  "translate_forgot-password-success": "Password reset email sent!",
+  "translate_forgot-password-success-hint": "Check your inbox for instructions.",
+  "translate_forgot-password-resend": "Resend email",
+  "translate_forgot-password-resend-hint": "Resend available in {{ seconds }}s",
+  "translate_forgot-password-resend-success": "Reset email resent successfully!",
+  "translate_forgot-password-submit": "Send reset link",
+  "translate_forgot-password-sending": "Sending...",
+  "translate_forgot-password-error-generic": "Unable to send reset email. Please try again.",
+  "translate_forgot-password-error-user-not-found": "No account found for this email address.",
+  "translate_forgot-password-error-invalid-email": "Please enter a valid email address.",
+  "translate_forgot-password-error-too-many-requests": "Too many requests. Please wait and try again.",
+  "translate_back-to-login": "Back to sign in",
+
   "translate_validation-email-required": "Email is required.",
   "translate_validation-email-invalid": "Enter a valid email address.",
   "translate_validation-password-required": "Password is required.",
@@ -120,6 +138,19 @@
 
   "translate_admin-users-error-load": "Unable to load users from Firestore.",
   "translate_admin-users-error-update": "Unable to update role. Please try again.",
+  "translate_admin-users-error-delete": "Unable to delete user. Please try again.",
+  "translate_admin-users-active": "active",
+  "translate_admin-users-inactive": "inactive",
+
+  "translate_deactivate": "Deactivate",
+  "translate_deactivate-user-title": "Deactivate user",
+  "translate_deactivate-user-message": "Are you sure you want to deactivate this user? They will not be able to sign in until reactivated.",
+  "translate_deactivate-user-success": "User deactivated successfully.",
+
+  "translate_delete": "Delete",
+  "translate_delete-user-title": "Delete user",
+  "translate_delete-user-message": "Are you sure you want to delete this user? This action cannot be undone.",
+  "translate_delete-user-success": "User deleted successfully.",
 
   "translate_status-in-stock": "In Stock",
   "translate_status-low-stock": "Low Stock",
@@ -202,8 +233,7 @@
   "translate_animals-comments-error-create": "Unable to add comment.",
   "translate_animals-validation-species-required": "Species is required.",
   "translate_animals-validation-status-required": "Status is required.",
-  "translate_animals-validation-birth-date-future": "Birth date cannot be in the future."
-,
+  "translate_animals-validation-birth-date-future": "Birth date cannot be in the future.",
   "translate_species-add-title": "Add Species",
   "translate_species-add-subtitle": "Create a new species entry for your farm.",
   "translate_species-type": "Type",
@@ -217,15 +247,11 @@
   "translate_species-success-added": "Species added successfully!",
   "translate_reset": "Reset",
   "translate_save": "Save",
-  "translate_saving": "Saving..."
-,
+  "translate_saving": "Saving...",
   "translate_animals-number": "Number",
   "translate_animals-number-placeholder": "Enter number or tag",
   "translate_animals-egg-laying-date": "Egg Laying Date",
   "translate_animals-hatching-date": "Hatching Date",
   "translate_animals-validation-number-required": "Number is required.",
-  "translate_animals-validation-hatching-after-egg": "Hatching date must be after egg laying date.",
-  "translate_species-type": "Type",
-  "translate_species-type-bird": "Bird",
-  "translate_species-type-animal": "Animal"
+  "translate_animals-validation-hatching-after-egg": "Hatching date must be after egg laying date."
 }
